@@ -44,7 +44,11 @@ export class DesignerService {
         const SUPABASE_URL = 'https://jgderqdwvyqfauxfwqsc.supabase.co';
         const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
         const BUCKET = 'instagram-media';
-        const storagePath = `vps_archive/${Date.now()}_${fileName}`;
+        // Garante que o fileName sempre tenha extensão .jpg
+        const safeFileName = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') 
+            ? fileName 
+            : `${fileName}.jpg`;
+        const storagePath = `vps_archive/${Date.now()}_${safeFileName}`;
 
         try {
             const response = await axios.post(
