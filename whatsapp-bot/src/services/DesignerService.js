@@ -74,24 +74,20 @@ export class DesignerService {
     async gerarSlidePremium({ texto, promptImagem, pastaDestino, nomeArquivo }) {
         const brandData = this.readBrand();
         const profile = brandData.profile;
-        // 1. Imagem ilustrativa gerada via SDK novo
-        const result = await genAI.models.generateContent({
-            model: "gemini-2.0-flash-exp-image-generation",
-            contents: [{ role: "user", parts: [{ text: promptImagem + " professional, cinematic lighting, 8k, highly detailed, no text, clean composition." }] }],
-            config: { responseModalities: ["TEXT", "IMAGE"] }
+        // 1. Imagem ilustrativa gerada via Imagen 4.0 Fast
+        const result = await genAI.models.generateImages({
+            model: "imagen-4.0-fast-generate-001",
+            prompt: promptImagem + " professional, cinematic lighting, 8k, highly detailed, no text, clean composition.",
+            config: { numberOfImages: 1 }
         });
 
         let bgBuffer = null;
-        if (result.candidates?.[0]?.content?.parts) {
-            for (const part of result.candidates[0].content.parts) {
-                if (part.inlineData) {
-                    bgBuffer = Buffer.from(part.inlineData.data, "base64");
-                    break;
-                }
-            }
+        const imgs = result.generatedImages || [];
+        if (imgs.length > 0 && imgs[0].image?.imageBytes) {
+            bgBuffer = Buffer.from(imgs[0].image.imageBytes, "base64");
         }
 
-        if (!bgBuffer) throw new Error("O Gemini não retornou uma imagem.");
+        if (!bgBuffer) throw new Error("O Imagen não retornou uma imagem.");
 
         // 2. Dimensões do Card: 4:5 (1080x1350)
         const W = 1080;

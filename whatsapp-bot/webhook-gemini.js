@@ -515,15 +515,17 @@ const functionHandlers = {
     },
     enviar_imagem_whatsapp: async (numero, args) => {
         try {
-            // Usa o Gemini para gerar imagem a partir do prompt
-            const imageModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" });
-            const result = await imageModel.generateContent({
-                contents: [{ role: "user", parts: [{ text: args.prompt + " professional, cinematic, 8k, no text." }] }],
-                generationConfig: { responseModalities: ["IMAGE"] }
+            // Usa Imagen 4.0 Fast para gerar imagem a partir do prompt
+            const { GoogleGenAI } = await import("@google/genai");
+            const imageAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            const result = await imageAI.models.generateImages({
+                model: "imagen-4.0-fast-generate-001",
+                prompt: args.prompt + " professional, cinematic, 8k, no text.",
+                config: { numberOfImages: 1 }
             });
-            const part = result.response.candidates?.[0]?.content?.parts?.[0];
-            if (part?.inlineData) {
-                await enviarImagem(numero, part.inlineData.data, args.legenda || "🎨 Imagem gerada por IA");
+            const imgs = result.generatedImages || [];
+            if (imgs.length > 0 && imgs[0].image?.imageBytes) {
+                await enviarImagem(numero, imgs[0].image.imageBytes, args.legenda || "🎨 Imagem gerada por IA");
                 return "Imagem gerada e enviada com sucesso no grupo!";
             }
             return "Não foi possível gerar a imagem. Tente um prompt diferente.";
