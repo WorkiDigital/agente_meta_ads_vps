@@ -103,8 +103,9 @@ export class DesignerService {
             }
         }).png().toBuffer();
 
-        // Quebra o texto vindo do JSON (Ex: "O petróleo pode chegar a US$120...\n\nE quase ninguém está falando...")
-        const parts = texto.split("\n\n");
+        // Quebra o texto vindo do JSON, removendo emojis que falham no SVG da VPS
+        const textoLimpo = texto.replace(/[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}]/gu, '');
+        const parts = textoLimpo.split("\n\n");
         const tituloBruto = parts[0] || "";
         const subtituloBruto = parts.slice(1).join("\n\n") || "";
 
@@ -137,7 +138,14 @@ export class DesignerService {
         const imgW = 920;
         let imgH = 1350 - currentY - 260; // Dynamic height based on text size, leaving room for footer
         if (imgH > 700) imgH = 700; // max height
-        if (imgH < 400) imgH = 400;
+
+        const imgY = currentY + 40;
+        
+        // Evita que a foto invada a base onde fica o profile pic e o footer (limite absoluto Y=1180)
+        if (imgY + imgH > 1180) {
+            imgH = 1180 - imgY;
+        }
+        if (imgH < 300) imgH = 300;
 
         const rectSvg = Buffer.from(
             `<svg><rect x="0" y="0" width="${imgW}" height="${imgH}" rx="32" ry="32"/></svg>`
@@ -148,8 +156,6 @@ export class DesignerService {
             .composite([{ input: rectSvg, blend: "dest-in" }])
             .png()
             .toBuffer();
-
-        const imgY = currentY + 40;
 
         // 4. Header & Rodapé SVG
         const headerFooterSvg = Buffer.from(`
@@ -164,8 +170,8 @@ export class DesignerService {
 
                 <!-- Footer Text (Profile Name) -->
                 <text x="190" y="1235" font-family="Arial, sans-serif" font-size="28" fill="#1a1a1a" font-weight="bold">Herickson Maia</text>
-                <circle cx="420" cy="1226" r="10" fill="#2196F3"/>
-                <path d="M415 1226 l4 4 l8 -8" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="410" cy="1225" r="11" fill="#2196F3"/>
+                <path d="M405 1225 l4 4 l8 -8" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 
                 <text x="190" y="1270" font-family="Arial, sans-serif" font-size="24" fill="#888888">${profile.handle}</text>
 
