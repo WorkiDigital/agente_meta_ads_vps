@@ -3,7 +3,7 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { DesignerService } from "./src/services/DesignerService.js";
 import { CopyService } from "./src/services/CopyService.js";
@@ -21,6 +21,7 @@ const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
+const IG_USER_ID = process.env.IG_USER_ID || "17841401666623403";
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
@@ -261,6 +262,9 @@ async function processarAudio(instance, keyId) {
 
 const functionHandlers = {
     gerar_post_premium: async (numero, args) => {
+        if (!Array.isArray(args.slides) || args.slides.length === 0) {
+            return "Erro: o parâmetro 'slides' deve ser um array não vazio.";
+        }
         const totalSlides = args.slides.length;
         await enviarMensagem(numero, `🎨 Gerando ${totalSlides} slides do seu post premium...`);
         const urlsGeradas = [];
@@ -320,7 +324,6 @@ const functionHandlers = {
         if (args.tipo === "reels" && args.video_url) {
             console.log(`🎞️ Publicando Reels direto via API...`);
             const META_TOKEN = process.env.META_ACCESS_TOKEN;
-            const IG_USER_ID = "17841401666623403";
             try {
                 // 1. Criar container de Reels
                 const container = await axios.post(`https://graph.facebook.com/v19.0/${IG_USER_ID}/media`, null, {
@@ -329,17 +332,19 @@ const functionHandlers = {
                         media_type: "REELS",
                         video_url: args.video_url,
                         caption: args.legenda
-                    }
+                    },
+                    timeout: 30000
                 });
                 const containerId = container.data.id;
-                
+
                 // 2. Aguardar processamento (polling)
                 let status = "IN_PROGRESS";
                 let tentativas = 0;
                 while (status === "IN_PROGRESS" && tentativas < 30) {
                     await new Promise(r => setTimeout(r, 5000));
                     const check = await axios.get(`https://graph.facebook.com/v19.0/${containerId}`, {
-                        params: { access_token: META_TOKEN, fields: "status_code" }
+                        params: { access_token: META_TOKEN, fields: "status_code" },
+                        timeout: 30000
                     });
                     status = check.data.status_code;
                     tentativas++;
@@ -348,10 +353,11 @@ const functionHandlers = {
                     console.error(`❌ Erro no processamento do Reels: ${status}`);
                     return `Erro: Vídeo não processou (status: ${status})`;
                 }
-                
+
                 // 3. Publicar
                 const pub = await axios.post(`https://graph.facebook.com/v19.0/${IG_USER_ID}/media_publish`, null, {
-                    params: { access_token: META_TOKEN, creation_id: containerId }
+                    params: { access_token: META_TOKEN, creation_id: containerId },
+                    timeout: 30000
                 });
                 console.log(`✅ Reels publicado! ID: ${pub.data.id}`);
                 return `Reels publicado com sucesso! ID: ${pub.data.id}`;
@@ -364,10 +370,9 @@ const functionHandlers = {
         // Fluxo original para imagem e carrossel
         const pastaRelativa = `posts/${args.pasta}`;
         const script = args.tipo === "carrossel" ? "postar-carrosel-instagram.mjs" : "postar-unico-instagram.mjs";
-        const command = `node ${script} --pasta "${pastaRelativa}" --caption "${args.legenda.replace(/"/g, '\\"')}"`;
-        
+
         return new Promise((resolve) => {
-            exec(command, { cwd: __dirname }, (error, stdout) => {
+            execFile(process.execPath, [script, "--pasta", pastaRelativa, "--caption", args.legenda], { cwd: __dirname }, (error, stdout) => {
                 if (error) resolve(`Erro na publicação: ${error.message}`);
                 const matchLink = stdout.match(/https:\/\/www\.instagram\.com\/p\/[a-zA-Z0-9_-]+\//);
                 resolve(matchLink ? `Post publicado com sucesso! Link: ${matchLink[0]}` : "Post publicado com sucesso!");
@@ -423,7 +428,6 @@ const functionHandlers = {
     get_instagram_profile_insights: async (numero, args) => {
         console.log(`📈 TOOL: get_instagram_profile_insights | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
-        const IG_USER_ID = "17841401666623403";
         const url = `https://graph.facebook.com/v19.0/${IG_USER_ID}/insights`;
         try {
             const res = await axios.get(url, {
@@ -456,7 +460,6 @@ const functionHandlers = {
     listar_posts_virais_instagram: async (numero, args) => {
         console.log(`🔥 TOOL: listar_posts_virais_instagram | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
-        const IG_USER_ID = "17841401666623403";
         const dias = args.dias || 7;
         try {
             const url = `https://graph.facebook.com/v19.0/${IG_USER_ID}/media`;
@@ -549,7 +552,6 @@ const functionHandlers = {
     agendar_post_instagram: async (numero, args) => {
         console.log(`📅 TOOL: agendar_post_instagram | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
-        const IG_USER_ID = "17841401666623403";
         try {
             // Converte data/hora para timestamp Unix
             const scheduledTime = Math.floor(new Date(args.data_hora).getTime() / 1000);
@@ -566,16 +568,18 @@ const functionHandlers = {
                     access_token: META_TOKEN,
                     image_url: args.image_url,
                     caption: args.legenda
-                }
+                },
+                timeout: 30000
             });
-            
+
             // 2. Publicar com agendamento
             const pub = await axios.post(`https://graph.facebook.com/v19.0/${IG_USER_ID}/media_publish`, null, {
                 params: {
                     access_token: META_TOKEN,
                     creation_id: container.data.id,
                     scheduled_publish_time: scheduledTime
-                }
+                },
+                timeout: 30000
             });
             
             const dataFormatada = new Date(args.data_hora).toLocaleString("pt-BR");

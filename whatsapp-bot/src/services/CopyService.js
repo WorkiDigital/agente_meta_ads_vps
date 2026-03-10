@@ -16,7 +16,12 @@ export class CopyService {
 
     readBrand() {
         if (!fs.existsSync(this.brandPath)) return null;
-        return JSON.parse(fs.readFileSync(this.brandPath, "utf8"));
+        try {
+            return JSON.parse(fs.readFileSync(this.brandPath, "utf8"));
+        } catch (e) {
+            console.error(`❌ Erro ao parsear brand.json: ${e.message}`);
+            return null;
+        }
     }
 
     /**

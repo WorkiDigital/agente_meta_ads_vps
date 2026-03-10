@@ -2,12 +2,17 @@ import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import axios from "axios";
 
-const EVOLUTION_URL = process.env.EVOLUTION_URL || "https://painelevo.workidigital.tech";
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "6A856829-3869-46DD-8223-C209C6780B48";
-const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || "claude-code";
-const WORK_DIR = process.env.WORK_DIR || "C:\\Users\\Samsung";
+const EVOLUTION_URL = process.env.EVOLUTION_URL;
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
+const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE;
+const WORK_DIR = process.env.WORK_DIR || process.cwd();
 const PORT = process.env.PORT || 3000;
-const CLOUDFLARED_BIN = process.env.CLOUDFLARED_BIN || "C:\\Users\\Samsung\\AppData\\Roaming\\npm\\cloudflared.cmd";
+const CLOUDFLARED_BIN = process.env.CLOUDFLARED_BIN || "cloudflared";
+
+if (!EVOLUTION_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
+  console.error("❌ EVOLUTION_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE são obrigatórios no .env");
+  process.exit(1);
+}
 
 let webhookProc = null;
 let tunnelProc = null;

@@ -41,7 +41,12 @@ export class DesignerService {
             console.warn(`⚠️ Arquivo brand.json não encontrado!`);
             return null;
         }
-        return JSON.parse(fs.readFileSync(this.brandPath, "utf8"));
+        try {
+            return JSON.parse(fs.readFileSync(this.brandPath, "utf8"));
+        } catch (e) {
+            console.error(`❌ Erro ao parsear brand.json: ${e.message}`);
+            return null;
+        }
     }
 
     async uploadBufferToSupabase(buffer, fileName) {
@@ -54,15 +59,18 @@ export class DesignerService {
             : `${fileName}.jpg`;
         const storagePath = `vps_archive/${Date.now()}_${safeFileName}`;
 
+        const ext = safeFileName.split('.').pop().toLowerCase();
+        const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
+
         try {
-            const response = await axios.post(
+            await axios.post(
                 `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${storagePath}`,
                 buffer,
                 {
                     headers: {
                         'Authorization': `Bearer ${SUPABASE_KEY}`,
                         'apikey': SUPABASE_KEY,
-                        'Content-Type': 'image/jpeg',
+                        'Content-Type': mimeType,
                         'x-upsert': 'true'
                     }
                 }
@@ -142,16 +150,10 @@ export class DesignerService {
 
         // 3. Processa a imagem do Gemini (Central) com cantos arredondados
         const imgW = 920;
-        let imgH = 1350 - currentY - 260; // Dynamic height based on text size, leaving room for footer
-        if (imgH > 700) imgH = 700; // max height
-
-        const imgY = currentY + 40;
-        
-        // Evita que a foto invada a base onde fica o profile pic e o footer (limite absoluto Y=1180)
-        if (imgY + imgH > 1180) {
-            imgH = 1180 - imgY;
-        }
-        if (imgH < 300) imgH = 300;
+        const imgY = Math.min(currentY + 40, 880); // garante espaço mínimo para a imagem
+        const spaceAvailable = 1180 - imgY;
+        let imgH = Math.min(spaceAvailable, 700); // max 700px, limitado pelo espaço disponível
+        if (imgH < 200) imgH = 200; // mínimo absoluto viável para renderização
 
         const rectSvg = Buffer.from(
             `<svg><rect x="0" y="0" width="${imgW}" height="${imgH}" rx="32" ry="32"/></svg>`

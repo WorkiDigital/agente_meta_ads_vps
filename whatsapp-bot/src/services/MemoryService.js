@@ -94,18 +94,20 @@ export class MemoryService {
 
         // Trim se passou do limite
         if (memory.history.length > MAX_HISTORY) {
-            await this.trimAndSummarize(sessionId, memory);
+            await this.trimAndSummarize(memory);
         }
 
         // Salva assincronamente (não bloqueia a resposta)
-        this.save(sessionId, memory).catch(() => {});
+        this.save(sessionId, memory).catch((e) => {
+            console.error("❌ MemoryService.addMessages: falha ao salvar:", e.message);
+        });
         return memory;
     }
 
     /**
      * Compacta mensagens antigas em resumo via Gemini
      */
-    async trimAndSummarize(sessionId, memory) {
+    async trimAndSummarize(memory) {
         const excess = memory.history.length - MAX_HISTORY + 5;
         if (excess <= 0) return;
 

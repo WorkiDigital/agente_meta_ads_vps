@@ -64,20 +64,28 @@ async function gerarImagem(prompt) {
 }
 
 async function enviarImagem(numero, base64, legenda) {
-  await evolutionApi.post(`/message/sendMedia/${EVOLUTION_INSTANCE}`, {
-    number: numero,
-    mediatype: "image",
-    mimetype: "image/png",
-    caption: legenda,
-    media: base64,
-  });
+  try {
+    await evolutionApi.post(`/message/sendMedia/${EVOLUTION_INSTANCE}`, {
+      number: numero,
+      mediatype: "image",
+      mimetype: "image/png",
+      caption: legenda,
+      media: base64,
+    });
+  } catch (e) {
+    console.error("Erro ao enviar imagem:", e.message);
+  }
 }
 
 async function enviarMensagem(numero, texto) {
-  await evolutionApi.post(`/message/sendText/${EVOLUTION_INSTANCE}`, {
-    number: numero,
-    text: texto
-  });
+  try {
+    await evolutionApi.post(`/message/sendText/${EVOLUTION_INSTANCE}`, {
+      number: numero,
+      text: texto
+    });
+  } catch (e) {
+    console.error("Erro ao enviar msg:", e.message);
+  }
 }
 
 async function enviarDigitando(numero) {
@@ -298,7 +306,7 @@ app.post("/webhook", async (req, res) => {
 
       let msgErro = "❌ Ocorreu um erro ao processar sua mensagem.";
       if (err.message === "Timeout") {
-        msgErro = "⏱️ A operação demorou mais de 2 minutos. Tente um comando mais simples.";
+        msgErro = `⏱️ A operação demorou mais de ${CLAUDE_TIMEOUT_MS / 60000} minutos. Tente um comando mais simples.`;
       } else if (err.message.includes("auth")) {
         msgErro = "🔐 Erro de autenticação do Claude Code. Verifique a configuração.";
       }
