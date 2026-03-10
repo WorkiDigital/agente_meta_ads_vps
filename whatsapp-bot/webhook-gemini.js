@@ -277,7 +277,11 @@ const functionHandlers = {
         for (let i = 0; i < buffersGerados.length; i++) {
             await enviarImagem(numero, buffersGerados[i].base64, `📸 Slide ${i+1} de ${buffersGerados.length}`);
         }
-        return `Post gerado com sucesso na pasta ${args.pasta_destino}. ${urlsGeradas.length} slides salvos na nuvem (Supabase). Legenda sugerida:\n${copyResult.legendaCompleta}`;
+        // Envia a legenda/copy direto no grupo
+        if (copyResult.legendaCompleta) {
+            await enviarMensagem(numero, `📝 *Legenda sugerida:*\n\n${copyResult.legendaCompleta}`);
+        }
+        return `Post gerado com sucesso na pasta ${args.pasta_destino}. ${urlsGeradas.length} slides salvos na nuvem (Supabase).`;
     },
     publicar_no_instagram: async (numero, args) => {
         await enviarMensagem(numero, "🚀 Iniciando a publicação no seu Instagram...");
