@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import sharp from "sharp";
+import axios from "axios";
 import { GoogleGenAI } from "@google/genai";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -37,6 +38,33 @@ export class DesignerService {
     readBrand() {
         if (!fs.existsSync(this.brandPath)) return null;
         return JSON.parse(fs.readFileSync(this.brandPath, "utf8"));
+    }
+
+    async uploadBufferToSupabase(buffer, fileName) {
+        const SUPABASE_URL = 'https://jgderqdwvyqfauxfwqsc.supabase.co';
+        const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+        const BUCKET = 'instagram-media';
+        const storagePath = `vps_archive/${Date.now()}_${fileName}`;
+
+        try {
+            const response = await axios.post(
+                `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${storagePath}`,
+                buffer,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'apikey': SUPABASE_KEY,
+                        'Content-Type': 'image/jpeg',
+                        'x-upsert': 'true'
+                    }
+                }
+            );
+
+            return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath}`;
+        } catch (error) {
+            console.error("Erro no upload Supabase:", error.message);
+            return null;
+        }
     }
 
     async gerarSlidePremium({ texto, promptImagem, pastaDestino, nomeArquivo }) {
@@ -174,12 +202,19 @@ export class DesignerService {
             compostions.push({ input: profileCircle, top: 1195, left: 80 });
         }
 
-        await sharp(baseBuffer)
+        const finalBuffer = await sharp(baseBuffer)
             .composite(compostions)
             .jpeg({ quality: 95 })
-            .toFile(finalPath);
+            .toBuffer();
+
+        await sharp(finalBuffer).toFile(finalPath);
+        
+        // Upload para Supabase (Archive)
+        const publicUrl = await this.uploadBufferToSupabase(finalBuffer, nomeArquivo);
 
         console.log(`✅ Slide salvo em: ${finalPath}`);
-        return finalPath;
+        if (publicUrl) console.log(`☁️  Backup em Supabase: ${publicUrl}`);
+        
+        return { localPath: finalPath, publicUrl };
     }
 }

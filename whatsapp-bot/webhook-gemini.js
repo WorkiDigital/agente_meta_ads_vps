@@ -102,13 +102,21 @@ app.post("/webhook", async (req, res) => {
             if (configPost) {
                 try {
                     // Executa Skill de Design
+                    const urlsGeradas = [];
                     for (const slide of configPost.slides) {
-                        await designer.gerarSlidePremium({
+                        const { publicUrl } = await designer.gerarSlidePremium({
                             texto: slide.texto,
                             promptImagem: slide.promptImagem,
                             pastaDestino: configPost.pasta_destino,
                             nomeArquivo: slide.nome_arquivo
                         });
+                        if (publicUrl) urlsGeradas.push(publicUrl);
+                    }
+
+                    // Envia as prévias das artes para o usuário via WhatsApp
+                    if (urlsGeradas.length > 0) {
+                        const linkTexto = urlsGeradas.map((url, i) => `🖼️ Slide ${i+1}: ${url}`).join("\n");
+                        await enviarMensagem(numero, `📸 Prévia das artes geradas:\n\n${linkTexto}`);
                     }
 
                     // Executa Skill de Copy
