@@ -261,40 +261,56 @@ async function processarAudio(instance, keyId) {
 
 const functionHandlers = {
     gerar_post_premium: async (numero, args) => {
-        await enviarMensagem(numero, "🎨 Entendido! Gerando as artes do seu post premium...");
+        const totalSlides = args.slides.length;
+        await enviarMensagem(numero, `🎨 Gerando ${totalSlides} slides do seu post premium...`);
         const urlsGeradas = [];
-        const buffersGerados = [];
-        for (const slide of args.slides) {
-            const result = await designer.gerarSlidePremium({
-                texto: slide.texto,
-                promptImagem: slide.promptImagem,
-                pastaDestino: args.pasta_destino,
-                nomeArquivo: slide.nome_arquivo
-            });
-            if (result.publicUrl) urlsGeradas.push(result.publicUrl);
-            // Lê o buffer local para enviar inline no WhatsApp
-            if (result.localPath && fs.existsSync(result.localPath)) {
-                const buf = fs.readFileSync(result.localPath);
-                buffersGerados.push({ base64: buf.toString('base64'), nome: slide.nome_arquivo });
+        let slidesGerados = 0;
+        let erros = 0;
+
+        for (let i = 0; i < totalSlides; i++) {
+            const slide = args.slides[i];
+            try {
+                console.log(`📸 Gerando slide ${i+1}/${totalSlides}: ${slide.nome_arquivo}`);
+                const result = await designer.gerarSlidePremium({
+                    texto: slide.texto,
+                    promptImagem: slide.promptImagem,
+                    pastaDestino: args.pasta_destino,
+                    nomeArquivo: slide.nome_arquivo
+                });
+
+                if (result.publicUrl) urlsGeradas.push(result.publicUrl);
+
+                // Envia slide IMEDIATAMENTE como imagem inline (não espera todos)
+                if (result.localPath && fs.existsSync(result.localPath)) {
+                    const buf = fs.readFileSync(result.localPath);
+                    await enviarImagem(numero, buf.toString('base64'), `📸 Slide ${i+1} de ${totalSlides}`);
+                }
+                slidesGerados++;
+            } catch (slideErr) {
+                erros++;
+                console.error(`❌ Erro no slide ${i+1}:`, slideErr.message);
+                await enviarMensagem(numero, `⚠️ Erro no slide ${i+1}: ${slideErr.message.substring(0, 100)}`);
             }
         }
-        const textosSlides = args.slides.map(s => s.texto);
-        const copyResult = await copy.gerarLegendaSEO({
-            tema: args.tema || "Post Estratégico",
-            textosSlides,
-            nicho: args.nicho,
-            tomDeVoz: args.tom_de_voz
-        });
-        copy.salvarLegenda(copyResult.legendaCompleta, args.pasta_destino);
-        // Envia cada slide como IMAGEM INLINE no WhatsApp (não só link)
-        for (let i = 0; i < buffersGerados.length; i++) {
-            await enviarImagem(numero, buffersGerados[i].base64, `📸 Slide ${i+1} de ${buffersGerados.length}`);
+
+        // Gera legenda SEO
+        try {
+            const textosSlides = args.slides.map(s => s.texto);
+            const copyResult = await copy.gerarLegendaSEO({
+                tema: args.tema || "Post Estratégico",
+                textosSlides,
+                nicho: args.nicho,
+                tomDeVoz: args.tom_de_voz
+            });
+            copy.salvarLegenda(copyResult.legendaCompleta, args.pasta_destino);
+            if (copyResult.legendaCompleta) {
+                await enviarMensagem(numero, `📝 *Legenda sugerida:*\n\n${copyResult.legendaCompleta}`);
+            }
+        } catch (copyErr) {
+            console.error("Erro ao gerar legenda:", copyErr.message);
         }
-        // Envia a legenda/copy direto no grupo
-        if (copyResult.legendaCompleta) {
-            await enviarMensagem(numero, `📝 *Legenda sugerida:*\n\n${copyResult.legendaCompleta}`);
-        }
-        return `Post gerado com sucesso na pasta ${args.pasta_destino}. ${urlsGeradas.length} slides salvos na nuvem (Supabase).`;
+
+        return `Post gerado: ${slidesGerados}/${totalSlides} slides criados com sucesso${erros > 0 ? ` (${erros} erros)` : ''}. Pasta: ${args.pasta_destino}. ${urlsGeradas.length} salvos na nuvem.`;
     },
     publicar_no_instagram: async (numero, args) => {
         await enviarMensagem(numero, "🚀 Iniciando a publicação no seu Instagram...");
