@@ -146,7 +146,7 @@ async function enviarMensagem(jid, texto) {
     try {
         await evolutionApi.post(`/message/sendText/${EVOLUTION_INSTANCE}`, {
             number: jid, // O componente 'number' na Evolution agora aceita JIDs (@s.whatsapp.net ou @g.us)
-            text: texto
+            text: texto + "\u200B" // Adiciona um espaço de largura zero para sabermos que foi o bot que enviou
         });
     } catch (e) {
         console.error("Erro ao enviar msg:", e.message);
@@ -301,11 +301,6 @@ app.post("/webhook", async (req, res) => {
             // Ignora silenciosamente tudo que não for do grupo autorizado
             return;
         }
-
-        // Evita loop infinito: Ignora mensagens do bot no próprio grupo
-        if (data?.key?.fromMe) {
-            return;
-        }
         
         const isGroup = true; // Por definição, já sabemos que é grupo agora
         const numero = remoteJid; // Usamos o JID do grupo para a sessão
@@ -318,10 +313,19 @@ app.post("/webhook", async (req, res) => {
         
         // Texto
         const texto = data?.message?.conversation ?? data?.message?.extendedTextMessage?.text;
+        
+        // Evita loop infinito: Se o texto contém o nosso espaço invisível, significa que o bot quem enviou esta mensagem
+        if (texto && texto.includes("\u200B")) {
+            return;
+        }
         if (texto) content.push({ text: texto });
 
         // Áudio (Mágica Multimodal)
         const isAudio = data?.message?.audioMessage || data?.message?.pttMessage;
+        
+        // Evita que audios enviados pelo próprio bot causem loop (no futuro se o bot mandar áudio)
+        // Atualmente ele só manda texto, mas se fromMe e não for áudio manual, ignoraremos
+        // Vamos permitir audios fromMe pois o usuário pode mandar áudio do próprio celular
         if (isAudio) {
             const audioPart = await processarAudio(EVOLUTION_INSTANCE, data.key.id);
             if (audioPart) content.push(audioPart);
