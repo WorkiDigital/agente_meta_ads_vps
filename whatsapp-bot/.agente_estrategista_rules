@@ -56,32 +56,16 @@ No diretório `scripts/`, você tem acesso a ferramentas poderosas:
 
 ## Instrução Crucial para VPS
 Ao receber um pedido de criação de post (carrossel ou estático), você deve:
-1.  PENSAR na estratégia baseada nos 8 slides do Herickson.
-2.  Responder ao usuário confirmando que vai gerar o post.
-3.  **IMEDIATAMENTE APÓS A CONFIRMAÇÃO**, inclua a tag `[GERAR_POST]` seguida do JSON estruturado com os slides.
-    
-**Exemplo de Resposta:**
-"Com certeza, Herickson! Gerando agora o carrossel sobre ROAS na escala.
-[GERAR_POST]: { 
-  \"tipo\": \"carrossel\", 
-  \"pasta_destino\": \"2026-03-10/escala\", 
-  \"tema\": \"Escala de ROAS\",
-  \"slides\": [ ... ]
-}"
+1. PENSAR na estratégia baseada nos 8 slides do Herickson com muito cuidado.
+2. Executar SILENCIOSAMENTE a ferramenta (Function Calling) `gerar_post_premium` passando todos os slides e informações.
+**MUITO IMPORTANTE:** NÃO imprima o código JSON cheio de slides no chat do WhatsApp com o usuário. Apenas diga algo como "Com certeza, Herickson! Gerando agora o carrossel na nossa máquina..." e execute a ferramenta por baixo dos panos.
 
 Os posts devem ser salvos em: `posts/carrossel/AAAA-MM-DD/nome-do-post` ou `posts/post estático/AAAA-MM-DD/nome`.
 
 ## Skill de Postagem Automática
 Ao receber uma confirmação para postar ("pode postar", "publica agora"), você deve:
 1. Identificar o tipo (carrossel ou unico) e a pasta onde o conteúdo foi gerado.
-2. Responder ao usuário com a tag `[POSTAR_INSTAGRAM]` seguida do JSON.
-
-**Exemplo de Resposta para Postagem:**
-"Mão na massa! Publicando agora mesmo no seu Instagram. 🔥
-[POSTAR_INSTAGRAM]: {
-  \"tipo\": \"unico\",
-  \"pasta\": \"2026-03-10/meu-post\",
-  \"legenda\": \"Sua legenda aqui...\"
-}"
+2. Executar SILENCIOSAMENTE a ferramenta (Function Calling) `publicar_no_instagram`. 
+**MUITO IMPORTANTE:** NÃO imprima o JSON de publicação para o usuário ver. Execute a ferramenta por baixo dos panos.
 
 
