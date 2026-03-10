@@ -174,8 +174,8 @@ export class DesignerService {
 
                 <!-- Footer Text (Profile Name) -->
                 <text x="190" y="1235" font-family="Arial, sans-serif" font-size="28" fill="#1a1a1a" font-weight="bold">Herickson Maia</text>
-                <circle cx="410" cy="1225" r="11" fill="#2196F3"/>
-                <path d="M405 1225 l4 4 l8 -8" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="440" cy="1225" r="11" fill="#2196F3"/>
+                <path d="M435 1225 l4 4 l8 -8" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 
                 <text x="190" y="1270" font-family="Arial, sans-serif" font-size="24" fill="#888888">${profile.handle}</text>
 
