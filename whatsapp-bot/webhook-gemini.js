@@ -22,9 +22,71 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const PORT = process.env.PORT || 3000;
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// Definição das Ferramentas (Tools)
+const tools = [
+    {
+        functionDeclarations: [
+            {
+                name: "gerar_post_premium",
+                description: "Gera as artes e copy para um post ou carrossel premium seguindo a estratégia do Herickson.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        tipo: { type: "STRING", enum: ["unico", "carrossel"] },
+                        pasta_destino: { type: "STRING", description: "Caminho da pasta (ex: 2026-03-10/meu-post)" },
+                        tema: { type: "STRING" },
+                        nicho: { type: "STRING" },
+                        tom_de_voz: { type: "STRING" },
+                        slides: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    texto: { type: "STRING" },
+                                    promptImagem: { type: "STRING" },
+                                    nome_arquivo: { type: "STRING" }
+                                }
+                            }
+                        }
+                    },
+                    required: ["tipo", "pasta_destino", "slides"]
+                }
+            },
+            {
+                name: "publicar_no_instagram",
+                description: "Publica um conteúdo já gerado no Instagram.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        tipo: { type: "STRING", enum: ["unico", "carrossel"] },
+                        pasta: { type: "STRING", description: "Nome da pasta dentro de /posts" },
+                        legenda: { type: "STRING" }
+                    },
+                    required: ["tipo", "pasta", "legenda"]
+                }
+            },
+            {
+                name: "get_facebook_ads_insights",
+                description: "Busca métricas de desempenho (ROI, CTR, CPC) de uma conta de anúncios do Facebook.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        ad_account_id: { type: "STRING", description: "ID da conta (ex: act_3174606892664917)" },
+                        date_preset: { type: "STRING", description: "Período: today, last_7d, last_30d, etc." },
+                        level: { type: "STRING", enum: ["campaign", "adset", "ad", "account"] }
+                    },
+                    required: ["ad_account_id", "date_preset"]
+                }
+            }
+        ]
+    }
+];
+
 const model = genAI.getGenerativeModel({ 
     model: "gemini-2.0-flash",
-    systemInstruction: fs.readFileSync(path.join(__dirname, ".agente_estrategista_rules"), "utf8")
+    systemInstruction: fs.readFileSync(path.join(__dirname, ".agente_estrategista_rules"), "utf8"),
+    tools: tools
 });
 
 const designer = new DesignerService(__dirname);
@@ -60,6 +122,83 @@ function extrairJson(texto) {
     return null;
 }
 
+async function processarAudio(instance, keyId) {
+    try {
+        const response = await evolutionApi.get(`/message/getBase64/${instance}?keyId=${keyId}`);
+        if (response.data?.base64) {
+            return {
+                inlineData: {
+                    data: response.data.base64.split(",")[1] || response.data.base64,
+                    mimeType: "audio/ogg; codecs=opus"
+                }
+            };
+        }
+    } catch (e) {
+        console.error("Erro ao processar áudio:", e.message);
+    }
+    return null;
+}
+
+const functionHandlers = {
+    gerar_post_premium: async (numero, args) => {
+        await enviarMensagem(numero, "🎨 Entendido! Vou começar a gerar as artes do seu post premium agora...");
+        const urlsGeradas = [];
+        for (const slide of args.slides) {
+            const { publicUrl } = await designer.gerarSlidePremium({
+                texto: slide.texto,
+                promptImagem: slide.promptImagem,
+                pastaDestino: args.pasta_destino,
+                nomeArquivo: slide.nome_arquivo
+            });
+            if (publicUrl) urlsGeradas.push(publicUrl);
+        }
+        const textosSlides = args.slides.map(s => s.texto);
+        const copyResult = await copy.gerarLegendaSEO({
+            tema: args.tema || "Post Estratégico",
+            textosSlides,
+            nicho: args.nicho,
+            tomDeVoz: args.tom_de_voz
+        });
+        copy.salvarLegenda(copyResult.legendaCompleta, args.pasta_destino);
+        if (urlsGeradas.length > 0) {
+            const linkTexto = urlsGeradas.map((url, i) => `🖼️ Slide ${i+1}: ${url}`).join("\n");
+            await enviarMensagem(numero, `📸 Prévia das artes geradas:\n\n${linkTexto}`);
+        }
+        return `Post gerado com sucesso na pasta ${args.pasta_destino}. Legenda sugerida:\n${copyResult.legendaCompleta}`;
+    },
+    publicar_no_instagram: async (numero, args) => {
+        await enviarMensagem(numero, "🚀 Iniciando a publicação no seu Instagram...");
+        const pastaRelativa = `posts/${args.pasta}`;
+        const script = args.tipo === "carrossel" ? "postar-carrosel-instagram.mjs" : "postar-unico-instagram.mjs";
+        const command = `node ${script} --pasta "${pastaRelativa}" --caption "${args.legenda.replace(/"/g, '\\"')}"`;
+        
+        return new Promise((resolve) => {
+            exec(command, { cwd: __dirname }, (error, stdout) => {
+                if (error) resolve(`Erro na publicação: ${error.message}`);
+                const matchLink = stdout.match(/https:\/\/www\.instagram\.com\/p\/[a-zA-Z0-9_-]+\//);
+                resolve(matchLink ? `Post publicado com sucesso! Link: ${matchLink[0]}` : "Post publicado com sucesso!");
+            });
+        });
+    },
+    get_facebook_ads_insights: async (numero, args) => {
+        const META_TOKEN = process.env.META_ACCESS_TOKEN;
+        const url = `https://graph.facebook.com/v19.0/${args.ad_account_id}/insights`;
+        try {
+            const res = await axios.get(url, {
+                params: {
+                    access_token: META_TOKEN,
+                    fields: "reach,impressions,spend,cpc,cpm,ctr,actions",
+                    date_preset: args.date_preset,
+                    level: args.level || "campaign"
+                }
+            });
+            return JSON.stringify(res.data);
+        } catch (e) {
+            return `Erro ao buscar insights: ${e.response?.data?.error?.message || e.message}`;
+        }
+    }
+};
+
 app.post("/webhook", async (req, res) => {
     res.sendStatus(200);
 
@@ -72,103 +211,49 @@ app.post("/webhook", async (req, res) => {
 
         const remoteJid = data?.key?.remoteJid || "";
         const numero = remoteJid.replace("@s.whatsapp.net", "").replace("@lid", "");
+        
+        const content = [];
+        
+        // Texto
         const texto = data?.message?.conversation ?? data?.message?.extendedTextMessage?.text;
+        if (texto) content.push({ text: texto });
 
-        if (!numero || !texto) return;
+        // Áudio (Mágica Multimodal)
+        const isAudio = data?.message?.audioMessage || data?.message?.pttMessage;
+        if (isAudio) {
+            const audioPart = await processarAudio(EVOLUTION_INSTANCE, data.key.id);
+            if (audioPart) content.push(audioPart);
+        }
 
-        console.log(`📩 [${numero}]: ${texto}`);
+        if (content.length === 0) return;
 
-        // Inicializa sessão se não existir
+        console.log(`📩 [${numero}]: Nova entrada (${isAudio ? "Possui Áudio" : "Texto"})`);
+
         if (!chatSessions[numero]) {
-            chatSessions[numero] = model.startChat({
-                history: [],
-                generationConfig: { maxOutputTokens: 2000 }
-            });
+            chatSessions[numero] = model.startChat({ history: [] });
         }
 
         const chat = chatSessions[numero];
-        
-        // Envia mensagem para o Gemini (Cérebro)
-        const result = await chat.sendMessage(texto);
-        const resposta = result.response.text();
+        let result = await chat.sendMessage(content);
+        let call = result.response.functionCalls()?.[0];
 
-        console.log(`🤖 [Gemini]: ${resposta.substring(0, 100)}...`);
-
-        // Detecta se o Gemini decidiu gerar um post (Skill de Design)
-        if (resposta.includes("[GERAR_POST]")) {
-            await enviarMensagem(numero, "🎨 Entendido! Vou começar a gerar as artes do seu post premium agora...");
+        // Loop de Function Calling
+        while (call) {
+            const handler = functionHandlers[call.name];
+            const toolResponse = handler ? await handler(numero, call.args) : "Ferramenta não encontrada.";
             
-            const configPost = extrairJson(resposta);
-            if (configPost) {
-                try {
-                    // Executa Skill de Design
-                    const urlsGeradas = [];
-                    for (const slide of configPost.slides) {
-                        const { publicUrl } = await designer.gerarSlidePremium({
-                            texto: slide.texto,
-                            promptImagem: slide.promptImagem,
-                            pastaDestino: configPost.pasta_destino,
-                            nomeArquivo: slide.nome_arquivo
-                        });
-                        if (publicUrl) urlsGeradas.push(publicUrl);
-                    }
-
-                    // Envia as prévias das artes para o usuário via WhatsApp
-                    if (urlsGeradas.length > 0) {
-                        const linkTexto = urlsGeradas.map((url, i) => `🖼️ Slide ${i+1}: ${url}`).join("\n");
-                        await enviarMensagem(numero, `📸 Prévia das artes geradas:\n\n${linkTexto}`);
-                    }
-
-                    // Executa Skill de Copy
-                    const textosSlides = configPost.slides.map(s => s.texto);
-                    const copyResult = await copy.gerarLegendaSEO({
-                        tema: configPost.tema || "Post Estratégico",
-                        textosSlides,
-                        nicho: configPost.nicho,
-                        tomDeVoz: configPost.tom_de_voz
-                    });
-                    
-                    copy.salvarLegenda(copyResult.legendaCompleta, configPost.pasta_destino);
-
-                    await enviarMensagem(numero, `✅ Post Gerado com Sucesso!\n\n📂 Pasta: ${configPost.pasta_destino}\n\n📝 Legenda:\n${copyResult.legendaCompleta.substring(0, 500)}...`);
-                } catch (err) {
-                    await enviarMensagem(numero, `❌ Erro ao processar skills: ${err.message}`);
+            result = await chat.sendMessage([{
+                functionResponse: {
+                    name: call.name,
+                    response: { result: toolResponse }
                 }
-            } else {
-                await enviarMensagem(numero, "❌ O Gemini sugeriu gerar um post mas o formato do JSON estava inválido.");
-            }
-        } else if (resposta.includes("[POSTAR_INSTAGRAM]")) {
-            const configPosting = extrairJson(resposta);
-            if (configPosting) {
-                await enviarMensagem(numero, "🚀 Iniciando a publicação no seu Instagram...");
-                
-                const pastaRelativa = `posts/${configPosting.pasta}`;
-                const script = configPosting.tipo === "carrossel" ? "postar-carrosel-instagram.mjs" : "postar-unico-instagram.mjs";
-                const legenda = configPosting.legenda || "";
+            }]);
+            call = result.response.functionCalls()?.[0];
+        }
 
-                // Comando para executar o script de postagem
-                const command = `node ${script} --pasta "${pastaRelativa}" --caption "${legenda.replace(/"/g, '\\"')}"`;
-                
-                exec(command, { cwd: __dirname }, async (error, stdout, stderr) => {
-                    if (error) {
-                        console.error(`Erro ao postar: ${error.message}`);
-                        await enviarMensagem(numero, `❌ Erro na publicação: ${error.message}`);
-                        return;
-                    }
-                    if (stderr) console.warn(`Aviso na postagem: ${stderr}`);
-
-                    // Extrair link do post do stdout se possível
-                    const matchLink = stdout.match(/https:\/\/www\.instagram\.com\/p\/[a-zA-Z0-9_-]+\//);
-                    const linkPost = matchLink ? matchLink[0] : "";
-
-                    await enviarMensagem(numero, `🔥 Postagem concluída com sucesso!${linkPost ? `\n\n🔗 Confira aqui: ${linkPost}` : ""}`);
-                });
-            } else {
-                await enviarMensagem(numero, "❌ Erro ao processar o comando de postagem (JSON inválido).");
-            }
-        } else {
-            // Resposta normal de chat
-            await enviarMensagem(numero, resposta);
+        const finalResponse = result.response.text();
+        if (finalResponse) {
+            await enviarMensagem(numero, finalResponse);
         }
 
     } catch (err) {
@@ -177,5 +262,5 @@ app.post("/webhook", async (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Agente VPS Online na porta ${PORT}`);
+    console.log(`🚀 Agente VPS Online (Multimodal + Tools) na porta ${PORT}`);
 });
