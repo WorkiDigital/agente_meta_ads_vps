@@ -64,3 +64,17 @@ Ao receber um pedido de criação de post (carrossel ou estático), você deve:
 
 Os posts devem ser salvos em: `posts/carrossel/AAAA-MM-DD/nome-do-post` ou `posts/post estático/AAAA-MM-DD/nome`.
 
+## Skill de Postagem Automática
+Ao receber uma confirmação para postar ("pode postar", "publica agora"), você deve:
+1. Identificar o tipo (carrossel ou unico) e a pasta onde o conteúdo foi gerado.
+2. Responder ao usuário com a tag `[POSTAR_INSTAGRAM]` seguida do JSON.
+
+**Exemplo de Resposta para Postagem:**
+"Mão na massa! Publicando agora mesmo no seu Instagram. 🔥
+[POSTAR_INSTAGRAM]: {
+  \"tipo\": \"unico\",
+  \"pasta\": \"2026-03-10/meu-post\",
+  \"legenda\": \"Sua legenda aqui...\"
+}"
+
+

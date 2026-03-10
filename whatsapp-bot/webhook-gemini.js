@@ -3,6 +3,7 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { exec } from "child_process";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { DesignerService } from "./src/services/DesignerService.js";
 import { CopyService } from "./src/services/CopyService.js";
@@ -127,6 +128,35 @@ app.post("/webhook", async (req, res) => {
                 }
             } else {
                 await enviarMensagem(numero, "❌ O Gemini sugeriu gerar um post mas o formato do JSON estava inválido.");
+            }
+        } else if (resposta.includes("[POSTAR_INSTAGRAM]")) {
+            const configPosting = extrairJson(resposta);
+            if (configPosting) {
+                await enviarMensagem(numero, "🚀 Iniciando a publicação no seu Instagram...");
+                
+                const pastaRelativa = `posts/${configPosting.pasta}`;
+                const script = configPosting.tipo === "carrossel" ? "postar-carrosel-instagram.mjs" : "postar-unico-instagram.mjs";
+                const legenda = configPosting.legenda || "";
+
+                // Comando para executar o script de postagem
+                const command = `node ${script} --pasta "${pastaRelativa}" --caption "${legenda.replace(/"/g, '\\"')}"`;
+                
+                exec(command, { cwd: __dirname }, async (error, stdout, stderr) => {
+                    if (error) {
+                        console.error(`Erro ao postar: ${error.message}`);
+                        await enviarMensagem(numero, `❌ Erro na publicação: ${error.message}`);
+                        return;
+                    }
+                    if (stderr) console.warn(`Aviso na postagem: ${stderr}`);
+
+                    // Extrair link do post do stdout se possível
+                    const matchLink = stdout.match(/https:\/\/www\.instagram\.com\/p\/[a-zA-Z0-9_-]+\//);
+                    const linkPost = matchLink ? matchLink[0] : "";
+
+                    await enviarMensagem(numero, `🔥 Postagem concluída com sucesso!${linkPost ? `\n\n🔗 Confira aqui: ${linkPost}` : ""}`);
+                });
+            } else {
+                await enviarMensagem(numero, "❌ Erro ao processar o comando de postagem (JSON inválido).");
             }
         } else {
             // Resposta normal de chat
