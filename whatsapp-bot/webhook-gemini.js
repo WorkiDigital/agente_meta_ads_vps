@@ -101,6 +101,22 @@ const tools = [
                     },
                     required: ["media_id"]
                 }
+            },
+            {
+                name: "criar_grupo_whatsapp",
+                description: "Cria um novo grupo no WhatsApp com o nome especificado.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        nome_grupo: { type: "STRING" },
+                        participantes: { 
+                            type: "ARRAY", 
+                            items: { type: "STRING" }, 
+                            description: "Lista de números com DDI (ex: ['558599...'])" 
+                        }
+                    },
+                    required: ["nome_grupo"]
+                }
             }
         ]
     }
@@ -126,11 +142,15 @@ const evolutionApi = axios.create({
 // Memória de Chat (Simples - em memória - na VPS pode ser Redis/DB futuramente)
 const chatSessions = {}; 
 
-async function enviarMensagem(numero, texto) {
-    await evolutionApi.post(`/message/sendText/${EVOLUTION_INSTANCE}`, {
-        number: numero,
-        text: texto
-    });
+async function enviarMensagem(jid, texto) {
+    try {
+        await evolutionApi.post(`/message/sendText/${EVOLUTION_INSTANCE}`, {
+            number: jid, // O componente 'number' na Evolution agora aceita JIDs (@s.whatsapp.net ou @g.us)
+            text: texto
+        });
+    } catch (e) {
+        console.error("Erro ao enviar msg:", e.message);
+    }
 }
 
 function extrairJson(texto) {
@@ -250,6 +270,17 @@ const functionHandlers = {
         } catch (e) {
             return `Erro ao analisar post: ${e.response?.data?.error?.message || e.message}`;
         }
+    },
+    criar_grupo_whatsapp: async (numero, args) => {
+        try {
+            const res = await evolutionApi.post(`/group/create/${EVOLUTION_INSTANCE}`, {
+                groupName: args.nome_grupo,
+                participants: args.participantes || []
+            });
+            return `Grupo '${args.nome_grupo}' criado com sucesso! JID: ${res.data?.id}`;
+        } catch (e) {
+            return `Erro ao criar grupo: ${e.response?.data?.error?.message || e.message}`;
+        }
     }
 };
 
@@ -261,10 +292,25 @@ app.post("/webhook", async (req, res) => {
         if (!["messages.upsert", "MESSAGES_UPSERT"].includes(body.event)) return;
 
         const data = body.data;
-        if (data?.key?.fromMe) return;
-
+        
+        // Evita loop infinito: Ignora mensagens do bot em grupos
         const remoteJid = data?.key?.remoteJid || "";
-        const numero = remoteJid.replace("@s.whatsapp.net", "").replace("@lid", "");
+        const isGroup = remoteJid.endsWith("@g.us");
+        
+        if (data?.key?.fromMe) {
+            // Se for grupo, ignora sempre (bot falando no grupo)
+            if (isGroup) return;
+            
+            // Se for PV, só processa se for o usuário mandando mensagem para si mesmo
+            // Geralmente, se remoteJid == meujid, é um chat de notas/comigo mesmo
+            // Mas para simplificar e evitar loops, vamos permitir apenas se houver texto manual
+            if (remoteJid.includes("status")) return; // ignore status updates
+        }
+        const numero = remoteJid; // Usamos o JID completo para manter o contexto correto (grupo ou PV)
+        
+        // Identifica quem enviou (especialmente em grupos)
+        const remetente = data?.key?.participant || remoteJid;
+        const nomeUsuario = data?.pushName || "Usuário";
         
         const content = [];
         
@@ -281,7 +327,7 @@ app.post("/webhook", async (req, res) => {
 
         if (content.length === 0) return;
 
-        console.log(`📩 [${numero}]: Nova entrada (${isAudio ? "Possui Áudio" : "Texto"})`);
+        console.log(`📩 [${isGroup ? "GRUPO" : "PV"}] ${nomeUsuario} (${remetente}): ${isAudio ? "Áudio" : "Texto"}`);
 
         if (!chatSessions[numero]) {
             chatSessions[numero] = model.startChat({ history: [] });
