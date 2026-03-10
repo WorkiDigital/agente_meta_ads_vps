@@ -1,0 +1,12 @@
+node_modules/
+**/node_modules/
+posts/
+**/posts/
+logs/
+**/logs/
+.env
+**/.env
+.DS_Store
+dist/
+build/
+*.log

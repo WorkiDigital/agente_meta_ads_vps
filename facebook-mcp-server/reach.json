@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "name": "reach",
+      "period": "day",
+      "values": [
+        {
+          "value": 809,
+          "end_time": "2026-03-08T08:00:00+0000"
+        },
+        {
+          "value": 305,
+          "end_time": "2026-03-09T07:00:00+0000"
+        }
+      ],
+      "title": "Alcance",
+      "description": "Número total de vezes que os objetos de mídia da conta comercial foram visualizados unicamente",
+      "id": "17841401666623403/insights/reach/day"
+    }
+  ],
+  "paging": {
+    "previous": "https://graph.facebook.com/v25.0/17841401666623403/insights?access_token=EAA8VGzZAxyqABQxn2E8Fsf3no6v2RBk8NIupwoM4kniUkrt8TFq6ErZAqzFBLZAcQZAzmhwElZCj8BhQ4FeOaChiVczDBaT33vf4AnUjIFQHIo4IEequMWCYbqvhgDDdjFSxmcUmLgtO2Fd1AIRLPgyIeHAm4reMY4jBKQBT35DvCFIEnzrKPyJsZB65AlfZBIZB&metric=reach&period=day&since=1772727148&until=1772899948",
+    "next": "https://graph.facebook.com/v25.0/17841401666623403/insights?access_token=EAA8VGzZAxyqABQxn2E8Fsf3no6v2RBk8NIupwoM4kniUkrt8TFq6ErZAqzFBLZAcQZAzmhwElZCj8BhQ4FeOaChiVczDBaT33vf4AnUjIFQHIo4IEequMWCYbqvhgDDdjFSxmcUmLgtO2Fd1AIRLPgyIeHAm4reMY4jBKQBT35DvCFIEnzrKPyJsZB65AlfZBIZB&metric=reach&period=day&since=1773072750&until=1773245550"
+  }
+}
