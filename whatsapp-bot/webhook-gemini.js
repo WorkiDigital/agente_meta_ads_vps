@@ -167,6 +167,17 @@ const tools = [
                     },
                     required: ["nicho"]
                 }
+            },
+            {
+                name: "buscar_criativos_ads",
+                description: "Busca os criativos (imagens, vídeos e thumbnails) dos anúncios ativos/recentes de uma conta Meta Ads.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        ad_account_id: { type: "STRING", description: "ID da conta (ex: act_782945989117867). Se não informado, usa a conta padrão." },
+                        limite: { type: "INTEGER", description: "Quantidade de anúncios a buscar (padrão: 10)" }
+                    }
+                }
             }
         ]
     }
@@ -556,6 +567,35 @@ Seja específico e atual. Foque em dados e exemplos reais.`;
             return result.response.text();
         } catch (e) {
             return `Erro ao buscar tendências: ${e.message}`;
+        }
+    },
+    buscar_criativos_ads: async (numero, args) => {
+        const META_TOKEN = process.env.META_ACCESS_TOKEN;
+        const accountId = (args.ad_account_id || "act_782945989117867").replace("act=", "act_");
+        const limite = args.limite || 10;
+        try {
+            // Busca anúncios com seus criativos
+            const res = await axios.get(`https://graph.facebook.com/v19.0/${accountId}/ads`, {
+                params: {
+                    access_token: META_TOKEN,
+                    fields: "name,status,creative{id,name,thumbnail_url,image_url,object_story_spec}",
+                    limit: limite
+                }
+            });
+            
+            const ads = res.data?.data || [];
+            if (ads.length === 0) return "Nenhum anúncio encontrado nessa conta.";
+            
+            const criativos = ads.map((ad, i) => ({
+                nome: ad.name,
+                status: ad.status,
+                thumbnail: ad.creative?.thumbnail_url || null,
+                imagem: ad.creative?.image_url || null
+            }));
+            
+            return JSON.stringify(criativos);
+        } catch (e) {
+            return `Erro ao buscar criativos: ${e.response?.data?.error?.message || e.message}`;
         }
     }
 };
