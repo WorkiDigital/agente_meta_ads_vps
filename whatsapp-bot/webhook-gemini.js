@@ -289,7 +289,8 @@ app.post("/webhook", async (req, res) => {
 
     try {
         const body = req.body;
-        if (!["messages.upsert", "MESSAGES_UPSERT"].includes(body.event)) return;
+        // Aceita tanto mensagens recebidas (MESSAGES_UPSERT) quanto mensagens enviadas por você (SEND_MESSAGE)
+        if (!["messages.upsert", "MESSAGES_UPSERT", "send.message", "SEND_MESSAGE"].includes(body.event)) return;
 
         const data = body.data;
         
