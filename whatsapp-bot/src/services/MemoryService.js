@@ -75,8 +75,9 @@ export class MemoryService {
                     }
                 }
             );
+            console.log(`💾 Memória salva no Supabase: ${path}`);
         } catch (e) {
-            console.error('MemoryService.save erro:', e.message);
+            console.error('❌ MemoryService.save erro:', e.response?.data || e.message);
         }
     }
 

@@ -313,10 +313,12 @@ const functionHandlers = {
         return `Post gerado: ${slidesGerados}/${totalSlides} slides criados com sucesso${erros > 0 ? ` (${erros} erros)` : ''}. Pasta: ${args.pasta_destino}. ${urlsGeradas.length} salvos na nuvem.`;
     },
     publicar_no_instagram: async (numero, args) => {
+        console.log(`🚀 TOOL: publicar_no_instagram | Args:`, JSON.stringify(args));
         await enviarMensagem(numero, "🚀 Iniciando a publicação no seu Instagram...");
         
         // Suporte a Reels via Graph API
         if (args.tipo === "reels" && args.video_url) {
+            console.log(`🎞️ Publicando Reels direto via API...`);
             const META_TOKEN = process.env.META_ACCESS_TOKEN;
             const IG_USER_ID = "17841401666623403";
             try {
@@ -342,14 +344,19 @@ const functionHandlers = {
                     status = check.data.status_code;
                     tentativas++;
                 }
-                if (status !== "FINISHED") return `Erro: Vídeo não processou (status: ${status})`;
+                if (status !== "FINISHED") {
+                    console.error(`❌ Erro no processamento do Reels: ${status}`);
+                    return `Erro: Vídeo não processou (status: ${status})`;
+                }
                 
                 // 3. Publicar
                 const pub = await axios.post(`https://graph.facebook.com/v19.0/${IG_USER_ID}/media_publish`, null, {
                     params: { access_token: META_TOKEN, creation_id: containerId }
                 });
+                console.log(`✅ Reels publicado! ID: ${pub.data.id}`);
                 return `Reels publicado com sucesso! ID: ${pub.data.id}`;
             } catch (e) {
+                console.error(`❌ Erro Reels:`, e.message);
                 return `Erro ao publicar Reels: ${e.response?.data?.error?.message || e.message}`;
             }
         }
@@ -368,6 +375,7 @@ const functionHandlers = {
         });
     },
     get_facebook_ads_insights: async (numero, args) => {
+        console.log(`📊 TOOL: get_facebook_ads_insights | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const url = `https://graph.facebook.com/v19.0/${args.ad_account_id}/insights`;
         const fields = "reach,impressions,spend,cpc,cpm,ctr,actions";
@@ -413,6 +421,7 @@ const functionHandlers = {
         }
     },
     get_instagram_profile_insights: async (numero, args) => {
+        console.log(`📈 TOOL: get_instagram_profile_insights | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const IG_USER_ID = "17841401666623403";
         const url = `https://graph.facebook.com/v19.0/${IG_USER_ID}/insights`;
@@ -430,6 +439,7 @@ const functionHandlers = {
         }
     },
     analisar_postagem_instagram: async (numero, args) => {
+        console.log(`🔍 TOOL: analisar_postagem_instagram | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         try {
             const mediaInfo = await axios.get(`https://graph.facebook.com/v19.0/${args.media_id}`, {
@@ -444,6 +454,7 @@ const functionHandlers = {
         }
     },
     listar_posts_virais_instagram: async (numero, args) => {
+        console.log(`🔥 TOOL: listar_posts_virais_instagram | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const IG_USER_ID = "17841401666623403";
         const dias = args.dias || 7;
@@ -503,6 +514,7 @@ const functionHandlers = {
         }
     },
     criar_grupo_whatsapp: async (numero, args) => {
+        console.log(`👥 TOOL: criar_grupo_whatsapp | Args:`, JSON.stringify(args));
         try {
             const res = await evolutionApi.post(`/group/create/${EVOLUTION_INSTANCE}`, {
                 groupName: args.nome_grupo,
@@ -514,6 +526,7 @@ const functionHandlers = {
         }
     },
     enviar_imagem_whatsapp: async (numero, args) => {
+        console.log(`🎨 TOOL: enviar_imagem_whatsapp | Args:`, JSON.stringify(args));
         try {
             // Usa Imagen 4.0 Fast para gerar imagem a partir do prompt
             const { GoogleGenAI } = await import("@google/genai");
@@ -534,6 +547,7 @@ const functionHandlers = {
         }
     },
     agendar_post_instagram: async (numero, args) => {
+        console.log(`📅 TOOL: agendar_post_instagram | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const IG_USER_ID = "17841401666623403";
         try {
@@ -571,6 +585,7 @@ const functionHandlers = {
         }
     },
     buscar_tendencias: async (numero, args) => {
+        console.log(`🌟 TOOL: buscar_tendencias | Args:`, JSON.stringify(args));
         try {
             const trendModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
             const prompt = `Você é um analista de tendências de marketing digital. Pesquise e liste as 5 principais tendências ATUAIS (março de 2026) para o nicho "${args.nicho}"${args.plataforma ? ` na plataforma ${args.plataforma}` : ''}.
@@ -590,6 +605,7 @@ Seja específico e atual. Foque em dados e exemplos reais.`;
         }
     },
     buscar_criativos_ads: async (numero, args) => {
+        console.log(`🎞️ TOOL: buscar_criativos_ads | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const accountId = (args.ad_account_id || "act_782945989117867").replace("act=", "act_");
         const limite = args.limite || 10;

@@ -30,6 +30,7 @@ export class CopyService {
      * @returns {Promise<{legenda: string, hashtags: string, legendaCompleta: string}>}
      */
     async gerarLegendaSEO({ tema, textosSlides, nicho, tomDeVoz }) {
+        console.log(`✍️ TOOL: gerarLegendaSEO | Tema: ${tema} | Nicho: ${nicho}`);
         const brandData = this.readBrand();
         const profile = brandData?.profile || {};
         const handle = profile.handle || "@hericksonmaia";

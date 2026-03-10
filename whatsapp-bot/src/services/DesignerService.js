@@ -36,7 +36,11 @@ export class DesignerService {
     }
 
     readBrand() {
-        if (!fs.existsSync(this.brandPath)) return null;
+        console.log(`📖 Lendo brand.json em: ${this.brandPath}`);
+        if (!fs.existsSync(this.brandPath)) {
+            console.warn(`⚠️ Arquivo brand.json não encontrado!`);
+            return null;
+        }
         return JSON.parse(fs.readFileSync(this.brandPath, "utf8"));
     }
 
@@ -64,9 +68,11 @@ export class DesignerService {
                 }
             );
 
-            return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath}`;
+            const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath}`;
+            console.log(`☁️ Upload Supabase OK: ${url}`);
+            return url;
         } catch (error) {
-            console.error("Erro no upload Supabase:", error.message);
+            console.error("❌ Erro no upload Supabase:", error.response?.data || error.message);
             return null;
         }
     }
