@@ -576,11 +576,11 @@ Seja específico e atual. Foque em dados e exemplos reais.`;
         const accountId = (args.ad_account_id || "act_782945989117867").replace("act=", "act_");
         const limite = args.limite || 10;
         try {
-            // Busca anúncios com seus criativos
+            // Busca anúncios com criativos + preview link + effective_object_story_id
             const res = await axios.get(`https://graph.facebook.com/v19.0/${accountId}/ads`, {
                 params: {
                     access_token: META_TOKEN,
-                    fields: "name,status,creative{id,name,thumbnail_url,image_url,object_story_spec}",
+                    fields: "name,status,preview_shareable_link,creative{id,name,thumbnail_url,image_url,effective_object_story_id,object_story_spec}",
                     limit: limite
                 }
             });
@@ -588,12 +588,28 @@ Seja específico e atual. Foque em dados e exemplos reais.`;
             const ads = res.data?.data || [];
             if (ads.length === 0) return "Nenhum anúncio encontrado nessa conta.";
             
-            const criativos = ads.map((ad, i) => ({
-                nome: ad.name,
-                status: ad.status,
-                thumbnail: ad.creative?.thumbnail_url || null,
-                imagem: ad.creative?.image_url || null
-            }));
+            const criativos = [];
+            for (const ad of ads) {
+                const creative = ad.creative || {};
+                const storyId = creative.effective_object_story_id || "";
+                
+                // Monta link público do post (Facebook ou Instagram)
+                let linkPublico = null;
+                if (storyId) {
+                    const [pageId, postId] = storyId.split("_");
+                    linkPublico = `https://www.facebook.com/${pageId}/posts/${postId}`;
+                }
+                
+                criativos.push({
+                    nome: ad.name,
+                    status: ad.status,
+                    link_preview: ad.preview_shareable_link || null,
+                    link_publico: linkPublico,
+                    imagem: creative.image_url || null,
+                    thumbnail: creative.thumbnail_url || null,
+                    creative_id: creative.id || null
+                });
+            }
             
             return JSON.stringify(criativos);
         } catch (e) {
