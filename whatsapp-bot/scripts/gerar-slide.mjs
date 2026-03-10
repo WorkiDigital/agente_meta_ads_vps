@@ -11,7 +11,7 @@ const PROFILE_PHOTO = "C:/Users/Samsung/evolution-mcp/fotos/foto-1773008491-0.jp
 
 async function gerarImagem(prompt) {
   const resultado = await genAI.models.generateContent({
-    model: "gemini-2.0-flash-exp-image-generation",
+    model: "imagen-4.0-fast-generate-001",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: { responseModalities: ["TEXT", "IMAGE"] },
   });

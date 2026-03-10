@@ -9,7 +9,7 @@ const arquivo = process.argv[3] || "imagem-gerada.png";
 console.log(`🎨 Gerando imagem: "${prompt}"...`);
 
 const resultado = await genAI.models.generateContent({
-  model: "gemini-2.0-flash-exp-image-generation",
+  model: "imagen-4.0-fast-generate-001",
   contents: [{ role: "user", parts: [{ text: prompt }] }],
   config: { responseModalities: ["TEXT", "IMAGE"] },
 });
