@@ -173,9 +173,10 @@ export class DesignerService {
                 ${svgTexts}
 
                 <!-- Footer Text (Profile Name) -->
-                <text x="190" y="1235" font-family="Arial, sans-serif" font-size="28" fill="#1a1a1a" font-weight="bold">Herickson Maia</text>
-                <circle cx="440" cy="1225" r="11" fill="#2196F3"/>
-                <path d="M435 1225 l4 4 l8 -8" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <text x="190" y="1238" font-family="Arial, sans-serif" font-size="30" fill="#1a1a1a" font-weight="bold">Herickson Maia</text>
+                <!-- Meta Verified Badge -->
+                <circle cx="445" cy="1228" r="13" fill="#1DA1F2"/>
+                <path d="M438 1228 l4 5 l10 -10" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 
                 <text x="190" y="1270" font-family="Arial, sans-serif" font-size="24" fill="#888888">${profile.handle}</text>
 
