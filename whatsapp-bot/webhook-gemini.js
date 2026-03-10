@@ -7,6 +7,7 @@ import { exec } from "child_process";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { DesignerService } from "./src/services/DesignerService.js";
 import { CopyService } from "./src/services/CopyService.js";
+import { MemoryService } from "./src/services/MemoryService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -191,6 +192,7 @@ const model = genAI.getGenerativeModel({
 
 const designer = new DesignerService(__dirname);
 const copy = new CopyService(__dirname);
+const memory = new MemoryService(GEMINI_API_KEY, process.env.SUPABASE_SERVICE_KEY);
 
 const evolutionApi = axios.create({
     baseURL: EVOLUTION_URL,
@@ -652,11 +654,13 @@ app.post("/webhook", async (req, res) => {
 
         console.log(`📩 [${isGroup ? "GRUPO" : "PV"}] ${nomeUsuario} (${remetente}): ${isAudio ? "Áudio" : "Texto"}`);
 
-        if (!chatSessions[numero]) {
-            chatSessions[numero] = model.startChat({ history: [] });
-        }
+        // Sistema de Memória Híbrida: carrega histórico do Supabase
+        const history = await memory.getHistory(numero);
+        const chat = model.startChat({ history });
 
-        const chat = chatSessions[numero];
+        // Registra a mensagem do usuário na memória
+        await memory.addMessages(numero, [{ role: 'user', parts: content.map(c => c.text ? { text: c.text } : c) }]);
+
         let result = await chat.sendMessage(content);
         let call = result.response.functionCalls()?.[0];
 
@@ -677,6 +681,8 @@ app.post("/webhook", async (req, res) => {
         const finalResponse = result.response.text();
         if (finalResponse) {
             await enviarMensagem(numero, finalResponse);
+            // Salva a resposta do model na memória
+            await memory.addMessages(numero, [{ role: 'model', parts: [{ text: finalResponse }] }]);
         }
 
     } catch (err) {
@@ -685,5 +691,5 @@ app.post("/webhook", async (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Agente VPS Online (Multimodal + Tools) na porta ${PORT}`);
+    console.log(`🚀 Agente VPS Online (Multimodal + Tools + Memória Persistente) na porta ${PORT}`);
 });
