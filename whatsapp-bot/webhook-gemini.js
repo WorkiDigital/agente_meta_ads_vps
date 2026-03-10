@@ -78,6 +78,29 @@ const tools = [
                     },
                     required: ["ad_account_id", "date_preset"]
                 }
+            },
+            {
+                name: "get_instagram_profile_insights",
+                description: "Obtém métricas do Perfil do Instagram (Alcance, Visitas, Impressões, Seguidores).",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        metricas: { type: "STRING", description: "Ex: impressions,reach,profile_views,follower_count" },
+                        periodo: { type: "STRING", enum: ["day", "week", "month"] }
+                    },
+                    required: ["metricas"]
+                }
+            },
+            {
+                name: "analisar_postagem_instagram",
+                description: "Obtém dados completos de uma postagem específica (curtidas, comentários, salvamentos e alcance).",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        media_id: { type: "STRING", description: "O ID único da publicação" }
+                    },
+                    required: ["media_id"]
+                }
             }
         ]
     }
@@ -195,6 +218,37 @@ const functionHandlers = {
             return JSON.stringify(res.data);
         } catch (e) {
             return `Erro ao buscar insights: ${e.response?.data?.error?.message || e.message}`;
+        }
+    },
+    get_instagram_profile_insights: async (numero, args) => {
+        const META_TOKEN = process.env.META_ACCESS_TOKEN;
+        const IG_USER_ID = "17841401666623403";
+        const url = `https://graph.facebook.com/v19.0/${IG_USER_ID}/insights`;
+        try {
+            const res = await axios.get(url, {
+                params: {
+                    access_token: META_TOKEN,
+                    metric: args.metricas,
+                    period: args.periodo || "day"
+                }
+            });
+            return JSON.stringify(res.data);
+        } catch (e) {
+            return `Erro ao buscar insights IG: ${e.response?.data?.error?.message || e.message}`;
+        }
+    },
+    analisar_postagem_instagram: async (numero, args) => {
+        const META_TOKEN = process.env.META_ACCESS_TOKEN;
+        try {
+            const mediaInfo = await axios.get(`https://graph.facebook.com/v19.0/${args.media_id}`, {
+                params: {
+                    access_token: META_TOKEN,
+                    fields: "caption,media_type,media_url,permalink,timestamp,username,comments_count,like_count"
+                }
+            });
+            return JSON.stringify(mediaInfo.data);
+        } catch (e) {
+            return `Erro ao analisar post: ${e.response?.data?.error?.message || e.message}`;
         }
     }
 };
