@@ -293,22 +293,24 @@ app.post("/webhook", async (req, res) => {
 
         const data = body.data;
         
-        // Evita loop infinito: Ignora mensagens do bot em grupos
+        // --- TRAVA DE SEGURANÇA: EXCLUSIVO PARA O QG DE PERFORMANCE ---
+        const QG_PERFORMANCE_JID = "120363407547741321@g.us";
         const remoteJid = data?.key?.remoteJid || "";
-        const isGroup = remoteJid.endsWith("@g.us");
         
-        if (data?.key?.fromMe) {
-            // Se for grupo, ignora sempre (bot falando no grupo)
-            if (isGroup) return;
-            
-            // Se for PV, só processa se for o usuário mandando mensagem para si mesmo
-            // Geralmente, se remoteJid == meujid, é um chat de notas/comigo mesmo
-            // Mas para simplificar e evitar loops, vamos permitir apenas se houver texto manual
-            if (remoteJid.includes("status")) return; // ignore status updates
+        if (remoteJid !== QG_PERFORMANCE_JID) {
+            // Ignora silenciosamente tudo que não for do grupo autorizado
+            return;
         }
-        const numero = remoteJid; // Usamos o JID completo para manter o contexto correto (grupo ou PV)
+
+        // Evita loop infinito: Ignora mensagens do bot no próprio grupo
+        if (data?.key?.fromMe) {
+            return;
+        }
         
-        // Identifica quem enviou (especialmente em grupos)
+        const isGroup = true; // Por definição, já sabemos que é grupo agora
+        const numero = remoteJid; // Usamos o JID do grupo para a sessão
+        
+        // Identifica quem enviou
         const remetente = data?.key?.participant || remoteJid;
         const nomeUsuario = data?.pushName || "Usuário";
         
