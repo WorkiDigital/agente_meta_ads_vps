@@ -6,9 +6,7 @@ import { randomUUID } from "crypto";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
-// Aumenta o limite para suportar payloads grandes da Evolution API (ex: sincronização de contatos)
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json());
 
 const EVOLUTION_URL = process.env.EVOLUTION_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
@@ -23,7 +21,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 // Números pré-autorizados (sem precisar de senha)
-const AUTHORIZED_NUMBERS = ["5585998372658", "558598372658"];
+const AUTHORIZED_NUMBERS = ["558598372658", "558592494552"];
 
 const evolutionApi = axios.create({
   baseURL: EVOLUTION_URL,
