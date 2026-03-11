@@ -18,8 +18,8 @@ WORKDIR /app
 # Copia arquivos de dependências
 COPY --chown=node:node package*.json ./
 
-# Instala dependências e o Claude Code CLI
-RUN npm install && npm install -g @anthropic-ai/claude-code
+# Instala dependências
+RUN npm install
 
 # Copia o restante do código com as permissões do usuário node
 COPY --chown=node:node . .
