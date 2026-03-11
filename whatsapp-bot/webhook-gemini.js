@@ -47,8 +47,9 @@ const tools = [
                                 properties: {
                                     texto: { type: "STRING" },
                                     promptImagem: { type: "STRING" },
-                                    nome_arquivo: { type: "STRING" }
-                                }
+                                    nome_arquivo: { type: "STRING", description: "Nome do arquivo de saída com extensão .jpg, ex: slide-01.jpg" }
+                                },
+                                required: ["texto", "promptImagem", "nome_arquivo"]
                             }
                         }
                     },
@@ -272,12 +273,20 @@ const functionHandlers = {
 
             const slide = args.slides[i];
             try {
-                console.log(`📸 Gerando slide ${i+1}/${totalSlides}: ${slide.nome_arquivo}`);
+                // Garante que nome_arquivo nunca chegue como undefined ao DesignerService
+                const nomeArquivo = slide.nome_arquivo || `slide-${String(i + 1).padStart(2, '0')}.jpg`;
+                if (!slide.nome_arquivo) {
+                    console.warn(`⚠️ Slide ${i+1}: nome_arquivo ausente. Usando fallback: ${nomeArquivo}`);
+                }
+                if (!slide.texto) throw new Error(`Slide ${i+1} está sem o campo 'texto'.`);
+                if (!slide.promptImagem) throw new Error(`Slide ${i+1} está sem o campo 'promptImagem'.`);
+
+                console.log(`📸 Gerando slide ${i+1}/${totalSlides}: ${nomeArquivo}`);
                 const result = await designer.gerarSlidePremium({
                     texto: slide.texto,
                     promptImagem: slide.promptImagem,
                     pastaDestino: args.pasta_destino,
-                    nomeArquivo: slide.nome_arquivo
+                    nomeArquivo
                 });
 
                 if (result.publicUrl) urlsGeradas.push(result.publicUrl);

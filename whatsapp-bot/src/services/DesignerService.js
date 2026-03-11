@@ -86,6 +86,14 @@ export class DesignerService {
     }
 
     async gerarSlidePremium({ texto, promptImagem, pastaDestino, nomeArquivo }) {
+        // Validação antecipada: evita o erro cryptico "path must be string" lá no final
+        if (typeof nomeArquivo !== 'string' || !nomeArquivo) {
+            throw new Error(`DesignerService: 'nomeArquivo' é obrigatório e deve ser uma string. Recebido: ${JSON.stringify(nomeArquivo)}`);
+        }
+        if (typeof pastaDestino !== 'string' || !pastaDestino) {
+            throw new Error(`DesignerService: 'pastaDestino' é obrigatório e deve ser uma string. Recebido: ${JSON.stringify(pastaDestino)}`);
+        }
+
         const brandData = this.readBrand();
         const profile = brandData.profile;
 
