@@ -1,5 +1,5 @@
 # Dockerfile - Agente Meta Ads VPS
-# Data: 11/03/2026
+# Data: 11/03/2026 - v1.0.1
 
 FROM node:20-slim
 
