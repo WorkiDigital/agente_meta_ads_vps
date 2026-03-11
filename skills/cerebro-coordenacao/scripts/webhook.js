@@ -6,7 +6,9 @@ import { randomUUID } from "crypto";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
-app.use(express.json());
+// Limite alto para evitar PayloadTooLargeError em sincronizações pesadas
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 const EVOLUTION_URL = process.env.EVOLUTION_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
@@ -209,18 +211,19 @@ app.post("/webhook", async (req, res) => {
     if (remoteJid.includes("@g.us")) return;
 
     // Suporte ao novo formato @lid do WhatsApp
-    const jid = (remoteJid.endsWith("@lid") && mensagem?.key?.remoteJidAlt)
-      ? mensagem.key.remoteJidAlt
-      : remoteJid;
+    const participant = mensagem?.key?.participant || remoteJid;
 
-    const numero = jid.replace("@s.whatsapp.net", "").replace("@lid", "");
+    // Extração robusta do número (remove sufixos e domínios)
+    const numero = participant.split('@')[0].split(':')[0];
+    const destino = remoteJid;
+
     const texto = mensagem?.message?.conversation
       ?? mensagem?.message?.extendedTextMessage?.text;
     const nome = mensagem?.pushName || numero;
 
     if (!numero || !texto) return;
 
-    console.log(`📩 ${nome} (${numero}): ${texto.substring(0, 100)}`);
+    console.log(`📩 De: ${numero} (${nome}) | No chat: ${destino}`);
 
     const cmd = texto.trim().toLowerCase();
 
@@ -335,6 +338,6 @@ app.get("/", (req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ Servidor rodando na porta ${PORT}`);
   console.log(`📁 Working directory: ${WORK_DIR}`);
-  console.log(`🔑 Números pré-autorizados: ${AUTHORIZED_NUMBERS.join(", ")}`);
+  console.log(`🔑 Autorizados: ${AUTHORIZED_NUMBERS.join(", ")}`);
   console.log(`🔗 Webhook: http://localhost:${PORT}/webhook`);
 });
