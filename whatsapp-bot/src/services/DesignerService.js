@@ -183,7 +183,7 @@ export class DesignerService {
         if (imgH < 200) imgH = 200; // mínimo absoluto viável para renderização
 
         const rectSvg = Buffer.from(
-            `<svg><rect x="0" y="0" width="${imgW}" height="${imgH}" rx="32" ry="32"/></svg>`
+            `<svg width="${imgW}" height="${imgH}"><rect x="0" y="0" width="${imgW}" height="${imgH}" rx="32" ry="32"/></svg>`
         );
 
         const geminiRounded = await sharp(bgBuffer)
@@ -222,7 +222,7 @@ export class DesignerService {
         // 5. Foto de Perfil Arredondada
         let profileCircle;
         if (fs.existsSync(PROFILE_PIC_PATH)) {
-            const circleSvg = Buffer.from('<svg><circle cx="45" cy="45" r="45"/></svg>');
+            const circleSvg = Buffer.from('<svg width="90" height="90"><circle cx="45" cy="45" r="45"/></svg>');
             profileCircle = await sharp(PROFILE_PIC_PATH)
                 .resize(90, 90, { fit: "cover", position: "top" })
                 .composite([{ input: circleSvg, blend: "dest-in" }])
