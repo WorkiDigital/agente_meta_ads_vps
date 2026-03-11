@@ -211,7 +211,8 @@ const evolutionApi = axios.create({
     headers: {
         "apikey": EVOLUTION_API_KEY,
         "Content-Type": "application/json"
-    }
+    },
+    timeout: 30000  // 30s — sem isso o enviarImagem pode pendurar infinitamente
 });
 
 async function enviarMensagem(jid, texto) {
@@ -269,7 +270,8 @@ const functionHandlers = {
 
         for (let i = 0; i < totalSlides; i++) {
             // Pausa entre slides para evitar rate limit do Imagen API
-            if (i > 0) await new Promise(r => setTimeout(r, 2000));
+            if (i > 0) await new Promise(r => setTimeout(r, 4000));
+            await enviarMensagem(numero, `⏳ Gerando slide ${i + 1} de ${totalSlides}...`);
 
             const slide = args.slides[i];
             try {
@@ -793,5 +795,5 @@ app.listen(PORT, "0.0.0.0", () => {
     const agora = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
     console.log(`🚀 Agente VPS Online (Multimodal + Tools + Memória Persistente) na porta ${PORT}`);
     console.log(`📅 Iniciado em: ${agora} (Horário de Fortaleza)`);
-    console.log(`🔖 Versão deployada: fix/path-undefined-completo-v2`);
+    console.log(`🔖 Versão deployada: fix/timeout-evolution-api-v3`);
 });

@@ -1,0 +1,23 @@
+# Dependências — reinstaladas pelo npm install no build
+node_modules/
+
+# Ambiente — variáveis vêm do Railway dashboard
+.env
+.env.local
+.env.production
+
+# Posts gerados em runtime (efêmeros)
+posts/
+
+# Logs
+logs/
+*.log
+
+# Arquivos de desenvolvimento
+archive/
+tmp_post.json
+*.mjs
+
+# Git
+.git/
+.gitignore
