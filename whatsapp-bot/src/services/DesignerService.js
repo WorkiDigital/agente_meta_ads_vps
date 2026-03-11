@@ -88,20 +88,36 @@ export class DesignerService {
     async gerarSlidePremium({ texto, promptImagem, pastaDestino, nomeArquivo }) {
         const brandData = this.readBrand();
         const profile = brandData.profile;
-        // 1. Imagem ilustrativa gerada via Imagen 4.0 Fast
-        const result = await genAI.models.generateImages({
-            model: "imagen-4.0-fast-generate-001",
-            prompt: promptImagem + " professional, cinematic lighting, 8k, highly detailed, no text, clean composition.",
-            config: { numberOfImages: 1 }
-        });
 
+        // 1. Imagem ilustrativa gerada via Imagen 4.0 Fast (com retry automático)
+        const MAX_TENTATIVAS = 3;
         let bgBuffer = null;
-        const imgs = result.generatedImages || [];
-        if (imgs.length > 0 && imgs[0].image?.imageBytes) {
-            bgBuffer = Buffer.from(imgs[0].image.imageBytes, "base64");
+
+        for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+            try {
+                console.log(`🎨 Imagen: tentativa ${tentativa}/${MAX_TENTATIVAS} — ${nomeArquivo}`);
+                const result = await genAI.models.generateImages({
+                    model: "imagen-4.0-fast-generate-001",
+                    prompt: promptImagem + " professional, cinematic lighting, 8k, highly detailed, no text, clean composition.",
+                    config: { numberOfImages: 1 }
+                });
+                const imgs = result.generatedImages || [];
+                if (imgs.length > 0 && imgs[0].image?.imageBytes) {
+                    bgBuffer = Buffer.from(imgs[0].image.imageBytes, "base64");
+                    break; // sucesso — sai do loop
+                }
+                console.warn(`⚠️ Imagen tentativa ${tentativa}: sem imagem retornada.`);
+            } catch (e) {
+                console.error(`❌ Imagen tentativa ${tentativa} falhou: ${e.message}`);
+                if (tentativa < MAX_TENTATIVAS) {
+                    const delay = tentativa * 3000; // 3s, 6s entre tentativas
+                    console.log(`⏳ Aguardando ${delay / 1000}s antes de tentar novamente...`);
+                    await new Promise(r => setTimeout(r, delay));
+                }
+            }
         }
 
-        if (!bgBuffer) throw new Error("O Imagen não retornou uma imagem.");
+        if (!bgBuffer) throw new Error(`O Imagen falhou após ${MAX_TENTATIVAS} tentativas.`);
 
         // 2. Dimensões do Card: 4:5 (1080x1350)
         const W = 1080;

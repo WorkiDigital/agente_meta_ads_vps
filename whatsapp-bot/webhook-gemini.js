@@ -203,9 +203,6 @@ const evolutionApi = axios.create({
     }
 });
 
-// Memória de Chat (Simples - em memória - na VPS pode ser Redis/DB futuramente)
-const chatSessions = {}; 
-
 async function enviarMensagem(jid, texto) {
     try {
         await evolutionApi.post(`/message/sendText/${EVOLUTION_INSTANCE}`, {
@@ -229,18 +226,6 @@ async function enviarImagem(jid, base64, caption) {
     } catch (e) {
         console.error("Erro ao enviar imagem:", e.message);
     }
-}
-
-function extrairJson(texto) {
-    const match = texto.match(/\{[\s\S]*\}/);
-    if (match) {
-        try {
-            return JSON.parse(match[0]);
-        } catch (e) {
-            return null;
-        }
-    }
-    return null;
 }
 
 async function processarAudio(instance, keyId) {
@@ -272,6 +257,9 @@ const functionHandlers = {
         let erros = 0;
 
         for (let i = 0; i < totalSlides; i++) {
+            // Pausa entre slides para evitar rate limit do Imagen API
+            if (i > 0) await new Promise(r => setTimeout(r, 2000));
+
             const slide = args.slides[i];
             try {
                 console.log(`📸 Gerando slide ${i+1}/${totalSlides}: ${slide.nome_arquivo}`);
@@ -379,7 +367,7 @@ const functionHandlers = {
             });
         });
     },
-    get_facebook_ads_insights: async (numero, args) => {
+    get_facebook_ads_insights: async (_numero, args) => {
         console.log(`📊 TOOL: get_facebook_ads_insights | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const url = `https://graph.facebook.com/v19.0/${args.ad_account_id}/insights`;
@@ -425,7 +413,7 @@ const functionHandlers = {
             return `Erro ao buscar insights: ${e.response?.data?.error?.message || e.message}`;
         }
     },
-    get_instagram_profile_insights: async (numero, args) => {
+    get_instagram_profile_insights: async (_numero, args) => {
         console.log(`📈 TOOL: get_instagram_profile_insights | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const url = `https://graph.facebook.com/v19.0/${IG_USER_ID}/insights`;
@@ -442,7 +430,7 @@ const functionHandlers = {
             return `Erro ao buscar insights IG: ${e.response?.data?.error?.message || e.message}`;
         }
     },
-    analisar_postagem_instagram: async (numero, args) => {
+    analisar_postagem_instagram: async (_numero, args) => {
         console.log(`🔍 TOOL: analisar_postagem_instagram | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         try {
@@ -457,7 +445,7 @@ const functionHandlers = {
             return `Erro ao analisar post: ${e.response?.data?.error?.message || e.message}`;
         }
     },
-    listar_posts_virais_instagram: async (numero, args) => {
+    listar_posts_virais_instagram: async (_numero, args) => {
         console.log(`🔥 TOOL: listar_posts_virais_instagram | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const dias = args.dias || 7;
@@ -516,7 +504,7 @@ const functionHandlers = {
             return `Erro ao buscar posts virais: ${e.response?.data?.error?.message || e.message}`;
         }
     },
-    criar_grupo_whatsapp: async (numero, args) => {
+    criar_grupo_whatsapp: async (_numero, args) => {
         console.log(`👥 TOOL: criar_grupo_whatsapp | Args:`, JSON.stringify(args));
         try {
             const res = await evolutionApi.post(`/group/create/${EVOLUTION_INSTANCE}`, {
@@ -549,7 +537,7 @@ const functionHandlers = {
             return `Erro ao gerar imagem: ${e.message}`;
         }
     },
-    agendar_post_instagram: async (numero, args) => {
+    agendar_post_instagram: async (_numero, args) => {
         console.log(`📅 TOOL: agendar_post_instagram | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         try {
@@ -588,7 +576,7 @@ const functionHandlers = {
             return `Erro ao agendar post: ${e.response?.data?.error?.message || e.message}`;
         }
     },
-    buscar_tendencias: async (numero, args) => {
+    buscar_tendencias: async (_numero, args) => {
         console.log(`🌟 TOOL: buscar_tendencias | Args:`, JSON.stringify(args));
         try {
             const trendModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -608,7 +596,7 @@ Seja específico e atual. Foque em dados e exemplos reais.`;
             return `Erro ao buscar tendências: ${e.message}`;
         }
     },
-    buscar_criativos_ads: async (numero, args) => {
+    buscar_criativos_ads: async (_numero, args) => {
         console.log(`🎞️ TOOL: buscar_criativos_ads | Args:`, JSON.stringify(args));
         const META_TOKEN = process.env.META_ACCESS_TOKEN;
         const accountId = (args.ad_account_id || "act_782945989117867").replace("act=", "act_");
