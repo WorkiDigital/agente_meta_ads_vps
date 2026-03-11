@@ -1,0 +1,54 @@
+{
+  "tipo": "carrossel",
+  "pasta_destino": "2026-03-11/manus-ai-v2",
+  "tema": "Conexão Manus AI e Instagram",
+  "nicho": "Marketing Digital e IA",
+  "tom_de_voz": "Estratégico e Visionário",
+  "slides": [
+    {
+      "texto": "🚨 A Meta pode ter acabado de mudar o jogo do Instagram.\n\nAgora você poderá usar Manus AI conectada diretamente ao seu Instagram.",
+      "promptImagem": "Cinematic ultra-realistic view of a glowing Meta infinity logo hovering over a futuristic digital landscape, dark background with subtle neon pink and blue accents, 8k resolution, highly detailed, dramatic lighting.",
+      "nome_arquivo": "slide-01.jpg"
+    },
+    {
+      "texto": "Até agora, usar IA no Instagram sempre foi complicado.\n\nEra preciso usar:\n\n• ferramentas externas\n• automações limitadas\n• APIs complexas\n• integrações cheias de erro\n\nTudo funcionando fora da plataforma.",
+      "promptImagem": "Abstract concept of a chaotic tangled web of glowing cables and complicated digital nodes, representing difficult software integrations, dark minimalist studio lighting, 8k.",
+      "nome_arquivo": "slide-02.jpg"
+    },
+    {
+      "texto": "Mas isso pode estar mudando.\n\nCom a Manus AI, a inteligência artificial poderá se conectar diretamente ao Instagram.\n\nSem intermediários.",
+      "promptImagem": "A single glowing, straight golden beam of light connecting two futuristic data spheres in a dark elegant space, symbolizing a direct and seamless connection, 8k, photorealistic.",
+      "nome_arquivo": "slide-03.jpg"
+    },
+    {
+      "texto": "Isso significa que a IA pode ajudar em tarefas como:\n\n• criação de conteúdo\n• análise de desempenho\n• organização de posts\n• otimização de estratégia",
+      "promptImagem": "Futuristic sleek glass holographic dashboard floating in mid-air displaying clean graphs, charts, and content blocks in a dark premium office environment, 8k.",
+      "nome_arquivo": "slide-04.jpg"
+    },
+    {
+      "texto": "Estamos entrando em uma nova fase das redes sociais:\n\n🤖 redes sociais operadas com ajuda de IA\n\nOnde parte da operação pode ser automatizada.",
+      "promptImagem": "A sleek, highly advanced robotic hand gently interacting with a glowing digital smartphone interface floating in the air, cinematic lighting, dark background, 8k.",
+      "nome_arquivo": "slide-05.jpg"
+    },
+    {
+      "texto": "Mas existe um ponto muito importante.\n\nA IA pode executar tarefas…\n\nMas não substitui estratégia, posicionamento e criatividade humana.",
+      "promptImagem": "A beautiful cinematic shot of a human eye reflecting complex digital data and code, symbolizing human vision and creativity above artificial intelligence, 8k.",
+      "nome_arquivo": "slide-06.jpg"
+    },
+    {
+      "texto": "Isso muda o jogo para dois tipos de pessoas:\n\n❌ quem apenas executa tarefas\n✅ quem entende de estratégia e comunicação",
+      "promptImagem": "A conceptual photograph of a chessboard made of glowing digital lines where a single glowing king piece stands out against a backdrop of identical pawn pieces, 8k.",
+      "nome_arquivo": "slide-07.jpg"
+    },
+    {
+      "texto": "A nova geração do marketing digital será:\n\nIA + estratégia humana.\n\nQuem aprender a usar essas ferramentas primeiro vai sair na frente.",
+      "promptImagem": "A person standing at the edge of a sleek modern balcony overlooking a glowing futuristic metropolis at night, symbolizing being ahead of the curve, 8k, highly atmospheric.",
+      "nome_arquivo": "slide-08.jpg"
+    },
+    {
+      "texto": "🚀 A IA está mudando o marketing digital mais rápido do que nunca.\n\nSe você quer entender antes da maioria,\n👉 clica em seguir agora e acompanha os próximos conteúdos.",
+      "promptImagem": "A glowing upwards pointing digital arrow made of light particles rising powerfully into the dark sky, symbolizing extreme growth and looking to the future, 8k.",
+      "nome_arquivo": "slide-09.jpg"
+    }
+  ]
+}

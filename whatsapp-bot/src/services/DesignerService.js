@@ -1,270 +1,203 @@
+import { GoogleGenAI } from "@google/genai";
+import sharp from "sharp";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-import sharp from "sharp";
-import axios from "axios";
-import { GoogleGenAI } from "@google/genai";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// (Removida inicialização global para evitar erro de env)
 
-const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-const PROFILE_PIC_PATH = path.join(__dirname, "..", "..", "fotos", "foto-1773008385-4.jpg");
-
-// Função para quebrar texto em linhas para SVG
-function wrapText(text, maxCharsPerLine) {
-    const words = text.split(/\s+/);
+function wrapText(text, maxCharsX) {
     const lines = [];
-    let currentLine = "";
-
-    for (const word of words) {
-        if ((currentLine + " " + word).trim().length <= maxCharsPerLine) {
-            currentLine = (currentLine + " " + word).trim();
+    const words = text.split(" ");
+    let curr = "";
+    for (const w of words) {
+        if ((curr + " " + w).trim().length <= maxCharsX) {
+            curr = (curr + " " + w).trim();
         } else {
-            lines.push(currentLine);
-            currentLine = word;
+            lines.push(curr);
+            curr = w;
         }
     }
-    if (currentLine) lines.push(currentLine);
+    if (curr) lines.push(curr);
     return lines;
 }
 
 export class DesignerService {
     constructor(basePath) {
-        this.basePath = basePath || path.join(__dirname, "..", "..");
-        this.brandPath = path.join(this.basePath, "data", "brand.json");
+        this.basePath = basePath;
+        this.moldurasIndex = 0; 
     }
 
     readBrand() {
-        console.log(`📖 Lendo brand.json em: ${this.brandPath}`);
-        if (!fs.existsSync(this.brandPath)) {
-            console.warn(`⚠️ Arquivo brand.json não encontrado!`);
-            return null;
-        }
-        try {
-            return JSON.parse(fs.readFileSync(this.brandPath, "utf8"));
-        } catch (e) {
-            console.error(`❌ Erro ao parsear brand.json: ${e.message}`);
-            return null;
-        }
+        const bp = path.join(this.basePath, "data", "brand.json");
+        return fs.existsSync(bp) ? JSON.parse(fs.readFileSync(bp, "utf8")) : { profile: { handle: "@user", profession: "" } };
     }
 
-    async uploadBufferToSupabase(buffer, fileName) {
-        const SUPABASE_URL = 'https://jgderqdwvyqfauxfwqsc.supabase.co';
+    async uploadToSupabase(buffer, nomeArquivo, pastaDestino) {
+        const { default: axios } = await import("axios");
+        const SUPABASE_URL = process.env.SUPABASE_URL || "https://jgderqdwvyqfauxfwqsc.supabase.co";
         const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-        const BUCKET = 'instagram-media';
-        // Garante que o fileName sempre tenha extensão .jpg
-        const safeFileName = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') 
-            ? fileName 
-            : `${fileName}.jpg`;
-        const storagePath = `vps_archive/${Date.now()}_${safeFileName}`;
-
-        const ext = safeFileName.split('.').pop().toLowerCase();
-        const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
-
+        const BUCKET = "instagram-media";
+        if (!SUPABASE_KEY) return null;
         try {
-            await axios.post(
-                `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${storagePath}`,
-                buffer,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'apikey': SUPABASE_KEY,
-                        'Content-Type': mimeType,
-                        'x-upsert': 'true'
-                    }
-                }
-            );
-
-            const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath}`;
-            console.log(`☁️ Upload Supabase OK: ${url}`);
-            return url;
-        } catch (error) {
-            console.error("❌ Erro no upload Supabase:", error.response?.data || error.message);
-            return null;
-        }
+            const ext = path.extname(nomeArquivo).toLowerCase();
+            const mimeType = ext === '.png' ? 'image/png' : 'image/jpeg';
+            const storagePath = `${pastaDestino}/${Date.now()}_${nomeArquivo}`;
+            await axios.put(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${storagePath}`, buffer, {
+                headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'apikey': SUPABASE_KEY, 'Content-Type': mimeType, 'x-upsert': 'true' }
+            });
+            return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${storagePath}`;
+        } catch (error) { return null; }
     }
 
-    async gerarSlidePremium({ texto, promptImagem, pastaDestino, nomeArquivo }) {
-        // Validação antecipada: evita o erro cryptico "path must be string" lá no final
-        if (typeof nomeArquivo !== 'string' || !nomeArquivo) {
-            throw new Error(`DesignerService: 'nomeArquivo' é obrigatório e deve ser uma string. Recebido: ${JSON.stringify(nomeArquivo)}`);
-        }
-        if (typeof pastaDestino !== 'string' || !pastaDestino) {
-            throw new Error(`DesignerService: 'pastaDestino' é obrigatório e deve ser uma string. Recebido: ${JSON.stringify(pastaDestino)}`);
-        }
+    async gerarSlidePremium({ texto, promptImagem, pastaDestino, nomeArquivo, caminhoImagemLocal = null, eCapa = false, modelo = "02" }) {
+        if (!nomeArquivo) throw new Error("nomeArquivo obrigatório.");
+        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+        const W = 1080; const H = 1350; const PAD = 80;
+        const brand = this.readBrand();
 
-        const brandData = this.readBrand();
-        if (!brandData || !brandData.profile) {
-            throw new Error("DesignerService: brand.json não encontrado ou inválido. Verifique o arquivo data/brand.json.");
-        }
-        const profile = brandData.profile;
-
-        // 1. Imagem ilustrativa gerada via Imagen 4.0 Fast (com retry automático)
-        const MAX_TENTATIVAS = 3;
         let bgBuffer = null;
-
-        for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+        if (caminhoImagemLocal && fs.existsSync(caminhoImagemLocal)) {
+            bgBuffer = fs.readFileSync(caminhoImagemLocal);
+        } else if (promptImagem) {
             try {
-                console.log(`🎨 Imagen: tentativa ${tentativa}/${MAX_TENTATIVAS} — ${nomeArquivo}`);
-                const result = await genAI.models.generateImages({
+                const res = await genAI.models.generateImages({
                     model: "imagen-4.0-fast-generate-001",
-                    prompt: promptImagem + " professional, cinematic lighting, 8k, highly detailed, no text, clean composition.",
-                    config: { numberOfImages: 1 }
+                    prompt: promptImagem + " cinematic, highly detailed, photorealistic, 8k, no text",
+                    config: { numberOfImages: 1, aspectRatio: "4:3" }
                 });
-                const imgs = result.generatedImages || [];
+                const imgs = res.generatedImages || [];
                 if (imgs.length > 0 && imgs[0].image?.imageBytes) {
                     bgBuffer = Buffer.from(imgs[0].image.imageBytes, "base64");
-                    break;
                 }
-                console.warn(`⚠️ Imagen tentativa ${tentativa}: sem imagem retornada. Resposta completa:`, JSON.stringify(result).substring(0, 300));
-            } catch (e) {
-                // Log detalhado para diagnóstico
-                const detalhe = e.response?.data ? JSON.stringify(e.response.data).substring(0, 300) : (e.stack || e.message);
-                console.error(`❌ Imagen tentativa ${tentativa} falhou — status: ${e.status || e.statusCode || 'N/A'} | msg: ${e.message} | detalhe: ${detalhe}`);
-                if (tentativa < MAX_TENTATIVAS) {
-                    const delay = tentativa * 5000; // 5s, 10s entre tentativas
-                    console.log(`⏳ Aguardando ${delay / 1000}s antes de tentar novamente...`);
-                    await new Promise(r => setTimeout(r, delay));
+            } catch (e) { console.error(`❌ Imagen ERRO:`, e.message); }
+        }
+        if (!bgBuffer) bgBuffer = await sharp({ create: { width: 400, height: 400, channels: 4, background: {r: 50, g:50, b:70, alpha:1} } }).png().toBuffer();
+
+        // --- PREPARAÇÃO DO PERFIL ---
+        const profPic = path.join(this.basePath, "..", "fotos", "foto-1773008385-4.jpg");
+        let avatarBaseSVG = `<circle cx="120" cy="90" r="40" fill="#333" />`;
+        if (fs.existsSync(profPic)) {
+            const av = fs.readFileSync(profPic).toString("base64");
+            avatarBaseSVG = `<defs><clipPath id="avatarClip"><circle cx="120" cy="90" r="40" /></clipPath></defs><image href="data:image/jpeg;base64,${av}" x="80" y="50" width="80" height="80" clip-path="url(#avatarClip)" preserveAspectRatio="xMidYMid slice" />`;
+        }
+        
+        const headerSVG = `
+            ${avatarBaseSVG}
+            <text x="180" y="85" font-family="Arial Black, sans-serif" font-size="28" fill="#111" font-weight="900">${process.env.NOME || "Herickson Maia"}</text>
+            <text x="180" y="115" font-family="Arial, sans-serif" font-size="22" fill="#666">${brand.profile.handle || "@hericksonmaia"}</text>
+        `;
+        const avatarSVG_Bottom = avatarBaseSVG.replace('y="50"', `y="${H - 140}"`).replace('cy="90"', `cy="${H - 100}"`);
+
+        // --- LÓGICA DE TEXTO ---
+        const textoLivre = texto.replace(/[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2700}-\u{27BF}]/gu, '');
+        const parts = textoLivre.split("\n\n");
+        let tituloStr = parts[0] || "";
+        let corpoStr = parts.slice(1).join("\n\n") || "";
+
+        const drawText = (txt, isTitle, yStart, boxH, fontSize) => {
+            if (!txt) return "";
+            let localSVG = "";
+            const sz = fontSize || (isTitle ? 62 : 36);
+            let currY = yStart + sz;
+            const wX = isTitle ? 32 : 45;
+            const color = isTitle ? "#111" : "#555";
+            const font = 'font-family="' + (isTitle ? 'Arial Black, sans-serif" font-weight="900"' : 'Arial, sans-serif"');
+            for (const pg of txt.split("\n")) {
+                if(!pg.trim()) { currY += sz; continue; }
+                for (const l of wrapText(pg, wX)) {
+                    if (currY - yStart > boxH) break;
+                    const escaped = l.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    localSVG += `<text x="${PAD}" y="${currY}" ${font} font-size="${sz}" fill="${color}" text-anchor="start">${escaped}</text>`;
+                    currY += sz * 1.25;
                 }
+                currY += sz * 0.5;
             }
+            return localSVG;
         }
 
-        // Fallback: se o Imagen falhou, usa fundo degradê gerado pelo sharp
-        if (!bgBuffer) {
-            console.warn(`⚠️ Imagen indisponível — usando fundo fallback para ${nomeArquivo}`);
-            bgBuffer = await sharp({
-                create: { width: 920, height: 700, channels: 4, background: { r: 30, g: 30, b: 50, alpha: 1 } }
-            }).png().toBuffer();
-        }
+        let finalBuffer = null;
 
-        // 2. Dimensões do Card: 4:5 (1080x1350)
-        const W = 1080;
-        const H = 1350;
+        if (modelo === "01") {
+            // MODELO 01: IMAGEM FUNDO TOTAL + TEXTO POR CIMA
+            const bgFull = await sharp(bgBuffer).resize(W, H, { fit: "cover" }).toBuffer();
+            const overlay = Buffer.from(`<svg width="${W}" height="${H}">
+                <rect width="${W}" height="${H}" fill="rgba(0,0,0,0.4)"/>
+                ${headerSVG.replace(/fill="#111"/g, 'fill="#fff"').replace(/fill="#666"/g, 'fill="#ccc"').replace(/fill="#333"/g, 'fill="#fff"')}
+                ${drawText(tituloStr, true, 300, 400, 72).replace(/fill="#111"/g, 'fill="#fff"')}
+                ${drawText(corpoStr, false, 750, 400, 42).replace(/fill="#555"/g, 'fill="#eee"')}
+            </svg>`);
+            finalBuffer = await sharp(bgFull).composite([{ input: overlay }]).jpeg({ quality: 95 }).toBuffer();
+        } 
+        else if (modelo === "03") {
+            // MODELO 03: MOLDURAS FIXAS (BAIXO, MEIO, CIMA)
+            const styleIdx = this.moldurasIndex % 3;
+            this.moldurasIndex++;
+            const moldurasFiles = ["baixo.png", "meio.png", "cima.png"];
+            const molduraPath = path.join(this.basePath, "assets", "molduras", moldurasFiles[styleIdx]);
+            
+            // Coordenadas aproximadas do retângulo cinza (X=59, W=701)
+            const boxes = [
+                { x: 59, y: 317, w: 701, h: 640 }, // Baixo
+                { x: 59, y: 66, w: 701, h: 875 },  // Meio
+                { x: 59, y: 66, w: 701, h: 511 }   // Cima
+            ];
+            const box = boxes[styleIdx];
 
-        // Base Branca / Off-white (padrão editorial)
-        const baseBuffer = await sharp({
-            create: {
-                width: W,
-                height: H,
-                channels: 4,
-                background: { r: 245, g: 245, b: 245, alpha: 1 } // #F5F5F5
+            const art = await sharp(bgBuffer).resize(box.w, box.h, { fit: "cover" })
+                .composite([{ input: Buffer.from(`<svg><rect width="${box.w}" height="${box.h}" rx="35" ry="35" fill="#fff"/></svg>`), blend: 'dest-in' }])
+                .png().toBuffer();
+
+            const textSVG = Buffer.from(`<svg width="819" height="1024">
+                ${drawText(tituloStr, true, styleIdx === 0 ? 150 : 600, 400, 36)}
+                ${drawText(corpoStr, false, styleIdx === 0 ? 220 : 750, 400, 24)}
+            </svg>`);
+
+            finalBuffer = await sharp(molduraPath).composite([
+                { input: art, left: box.x, top: box.y },
+                { input: textSVG }
+            ]).jpeg({ quality: 95 }).toBuffer();
+        } 
+        else {
+            // MODELO 02 (PADRÃO): MAGAZINE DINÂMICO
+            const estilo = eCapa ? 0 : (this.moldurasIndex % 3);
+            this.moldurasIndex++;
+            let imgBox = { x: PAD, y: 0, w: W - (PAD*2), h: 600 };
+            let tTop = { y: 200, h: 400 }; let tBot = { y: 0, h: 0 };
+
+            if (estilo === 0) { imgBox.y = H - 750; } // Foto baixo
+            else if (estilo === 1) { imgBox.y = (H - 600) / 2 + 50; } // Foto meio
+            else { imgBox.y = 200; tBot = { y: 850, h: 400 }; tTop = { y: 0, h: 0 }; } // Foto cima
+
+            let svgTexts = "";
+            if (tTop.y > 0) {
+                svgTexts += drawText(tituloStr, true, tTop.y, tTop.h);
+                svgTexts += drawText(corpoStr, false, tTop.y + 150, tTop.h);
+            } else {
+                svgTexts += drawText(tituloStr, true, tBot.y, tBot.h);
+                svgTexts += drawText(corpoStr, false, tBot.y + 150, tBot.h);
             }
-        }).png().toBuffer();
 
-        // Quebra o texto vindo do JSON, removendo emojis que falham no SVG da VPS
-        const textoLimpo = texto.replace(/[\u{1F300}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}]/gu, '');
-        const parts = textoLimpo.split("\n\n");
-        const tituloBruto = parts[0] || "";
-        const subtituloBruto = parts.slice(1).join("\n\n") || "";
-
-        // Processa Título
-        const tituloLinhas = wrapText(tituloBruto, 25);
-        let currentY = 220;
-        let svgTexts = "";
-
-        for (const linha of tituloLinhas) {
-            const escaped = linha.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            svgTexts += `<text x="80" y="${currentY}" font-family="Arial Black, sans-serif" font-size="64" fill="#1a1a1a" font-weight="900">${escaped}</text>`;
-            currentY += 75;
-        }
-
-        // Processa Subtítulo
-        currentY += 20;
-        const subParagrafos = subtituloBruto.split('\n');
-        for (const pg of subParagrafos) {
-            if (!pg.trim()) continue;
-            const subLinhas = wrapText(pg, 45);
-            for (const linha of subLinhas) {
-                const escaped = linha.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                svgTexts += `<text x="80" y="${currentY}" font-family="Arial, sans-serif" font-size="34" fill="#555555" font-weight="400">${escaped}</text>`;
-                currentY += 45;
-            }
-            currentY += 15;
-        }
-
-        // 3. Processa a imagem do Gemini (Central) com cantos arredondados
-        const imgW = 920;
-        const imgY = Math.min(currentY + 40, 880); // garante espaço mínimo para a imagem
-        const spaceAvailable = 1180 - imgY;
-        let imgH = Math.min(spaceAvailable, 700); // max 700px, limitado pelo espaço disponível
-        if (imgH < 200) imgH = 200; // mínimo absoluto viável para renderização
-
-        const rectSvg = Buffer.from(
-            `<svg><rect x="0" y="0" width="${imgW}" height="${imgH}" rx="32" ry="32"/></svg>`
-        );
-
-        const geminiRounded = await sharp(bgBuffer)
-            .resize(imgW, imgH, { fit: "cover" })
-            .composite([{ input: rectSvg, blend: "dest-in" }])
-            .png()
-            .toBuffer();
-
-        // 4. Header & Rodapé SVG
-        const headerFooterSvg = Buffer.from(`
-            <svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
-                <!-- Header -->
-                <text x="80" y="80" font-family="Arial, sans-serif" font-size="24" fill="#888888" font-weight="600">${profile.handle}</text>
-                <text x="540" y="80" font-family="Arial, sans-serif" font-size="24" fill="#888888" font-weight="600" text-anchor="middle">IA para conteúdo</text>
-                <text x="1000" y="80" font-family="Arial, sans-serif" font-size="24" fill="#888888" font-weight="600" text-anchor="end">Copyright © 2026</text>
-
-                <!-- Dynamic Text -->
+            const FINAL_SVG = Buffer.from(`<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+                <rect width="${W}" height="${H}" fill="#FDFDFD"/>
+                ${headerSVG}
                 ${svgTexts}
+                ${avatarSVG_Bottom}
+                <text x="180" y="${H - 105}" font-family="Arial Black, sans-serif" font-size="28" fill="#111" font-weight="900">${process.env.NOME || "Herickson Maia"}</text>
+                <text x="180" y="${H - 75}" font-family="Arial, sans-serif" font-size="22" fill="#666">${brand.profile.handle || "@hericksonmaia"}</text>
+                <circle cx="${W - 100}" cy="${H - 90}" r="30" fill="#444"/>
+                <path d="M ${W-105} ${H-100} L ${W-95} ${H-90} L ${W-105} ${H-80}" stroke="white" stroke-width="4" fill="none" />
+            </svg>`);
 
-                <!-- Footer Text (Profile Name) -->
-                <text x="190" y="1238" font-family="Arial, sans-serif" font-size="30" fill="#1a1a1a" font-weight="bold">Herickson Maia</text>
-                <!-- Meta Verified Badge -->
-                <circle cx="445" cy="1228" r="13" fill="#1DA1F2"/>
-                <path d="M438 1228 l4 5 l10 -10" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                
-                <text x="190" y="1270" font-family="Arial, sans-serif" font-size="24" fill="#888888">${profile.handle}</text>
-
-                <!-- Swipe Icon area -->
-                <text x="930" y="1255" font-family="Arial, sans-serif" font-size="24" fill="#555555" text-anchor="end" font-weight="600">Arrasta para o lado</text>
-                <circle cx="970" cy="1245" r="28" fill="#444444"/>
-                <!-- simple arrow pattern -->
-                <path d="M965 1235 l10 10 l-10 10" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        `);
-
-        // 5. Foto de Perfil Arredondada
-        let profileCircle;
-        if (fs.existsSync(PROFILE_PIC_PATH)) {
-            const circleSvg = Buffer.from('<svg><circle cx="45" cy="45" r="45"/></svg>');
-            profileCircle = await sharp(PROFILE_PIC_PATH)
-                .resize(90, 90, { fit: "cover", position: "top" })
-                .composite([{ input: circleSvg, blend: "dest-in" }])
-                .png()
-                .toBuffer();
+            const clipRect = Buffer.from(`<svg><rect width="${imgBox.w}" height="${imgBox.h}" rx="35" ry="35" fill="#fff"/></svg>`);
+            const arteFinal = await sharp(bgBuffer).resize(imgBox.w, imgBox.h, { fit: "cover" }).composite([{ input: clipRect, blend: 'dest-in' }]).png().toBuffer();
+            finalBuffer = await sharp(FINAL_SVG).composite([{ input: arteFinal, left: imgBox.x, top: imgBox.y }]).jpeg({ quality: 95 }).toBuffer();
         }
 
-        // 6. Composição Final
-        const outDir = path.join(this.basePath, "posts", pastaDestino);
-        if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-        const finalPath = path.join(outDir, nomeArquivo);
-
-        const compostions = [
-            { input: headerFooterSvg, top: 0, left: 0 },
-            { input: geminiRounded, top: imgY, left: 80 }
-        ];
-
-        if (profileCircle) {
-            compostions.push({ input: profileCircle, top: 1195, left: 80 });
-        }
-
-        const finalBuffer = await sharp(baseBuffer)
-            .composite(compostions)
-            .jpeg({ quality: 95 })
-            .toBuffer();
-
-        await sharp(finalBuffer).toFile(finalPath);
-        
-        // Upload para Supabase (Archive)
-        const publicUrl = await this.uploadBufferToSupabase(finalBuffer, nomeArquivo);
-
-        console.log(`✅ Slide salvo em: ${finalPath}`);
-        if (publicUrl) console.log(`☁️  Backup em Supabase: ${publicUrl}`);
-        
-        return { localPath: finalPath, publicUrl };
+        const outBase = path.resolve(this.basePath, "posts", pastaDestino);
+        if (!fs.existsSync(outBase)) fs.mkdirSync(outBase, { recursive: true });
+        const filePath = path.join(outBase, nomeArquivo);
+        fs.writeFileSync(filePath, finalBuffer);
+        const url = await this.uploadToSupabase(finalBuffer, nomeArquivo, pastaDestino);
+        return { publicUrl: url };
     }
 }

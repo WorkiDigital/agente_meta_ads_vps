@@ -11,7 +11,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const imageModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" });
+const imageModel = genAI.getGenerativeModel({ model: "imagen-4.0-fast-generate-001" });
 
 const dbPath = path.join(__dirname, 'data.json');
 const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
@@ -79,7 +79,7 @@ async function gerarSlidePremium(texto, promptImagem, pasta_destino, nome_arquiv
                 ${linhasSvg}
                 <!-- Barra de assinatura -->
                 <rect x="0" y="${BAR_Y}" width="${SLIDE_W}" height="160" fill="rgba(0,0,0,0.7)"/>
-                <text x="540" y="${BAR_Y + 60}" font-family="Arial Black, Arial" font-size="34" fill="white" font-weight="900" text-anchor="middle">${db.profile.handle || '@hericksonmaia'} ✓</text>
+                <text x="540" y="${BAR_Y + 60}" font-family="Arial Black, Arial" font-size="34" fill="white" font-weight="900" text-anchor="middle">${db.profile.handle || '@hericksonmaia'}</text>
                 <text x="540" y="${BAR_Y + 105}" font-family="Arial" font-size="26" fill="#cccccc" text-anchor="middle">${db.profile.profession || 'Estrategista Digital'}</text>
             </svg>`
         );

@@ -125,7 +125,7 @@ export class MemoryService {
 
         if (textos.length > 50) {
             try {
-                const summarizer = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+                const summarizer = this.genAI.getGenerativeModel({ model: 'gemini-3.1-pro-preview-customtools' });
                 const result = await summarizer.generateContent(
                     `Resuma esta conversa em no máximo 3 frases CURTAS e objetivas em português. ` +
                     `Mantenha: nomes de pessoas, IDs de conta, ferramentas usadas e decisões tomadas. ` +

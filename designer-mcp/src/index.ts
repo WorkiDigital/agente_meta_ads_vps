@@ -164,7 +164,7 @@ server.tool(
         const db = readDb();
         const profile = db.profile;
         //@ts-ignore
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" });
+        const model = genAI.getGenerativeModel({ model: "imagen-4.0-fast-generate-001" });
 
         // 1. Gerar imagem de fundo
         const result = await model.generateContent({
@@ -230,7 +230,7 @@ server.tool(
                 ${linhasSvg}
                 <!-- Barra de assinatura -->
                 <rect x="0" y="${BAR_Y}" width="${SLIDE_W}" height="160" fill="rgba(0,0,0,0.7)"/>
-                <text x="540" y="${BAR_Y + 60}" font-family="Arial Black, Arial" font-size="34" fill="white" font-weight="900" text-anchor="middle">${profile.handle} ✓</text>
+                <text x="540" y="${BAR_Y + 60}" font-family="Arial Black, Arial" font-size="34" fill="white" font-weight="900" text-anchor="middle">${profile.handle}</text>
                 <text x="540" y="${BAR_Y + 105}" font-family="Arial" font-size="26" fill="#cccccc" text-anchor="middle">${profile.profession}</text>
             </svg>`
         );

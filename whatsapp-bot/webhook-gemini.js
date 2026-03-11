@@ -197,7 +197,7 @@ const tools = [
 ];
 
 const model = genAI.getGenerativeModel({ 
-    model: "gemini-2.0-flash",
+    model: "gemini-3.1-pro-preview-customtools", // O cérebro mais potente e estratégico disponível
     systemInstruction: fs.readFileSync(path.join(__dirname, ".agente_estrategista_rules"), "utf8"),
     tools: tools
 });
@@ -596,7 +596,7 @@ const functionHandlers = {
     buscar_tendencias: async (_numero, args) => {
         console.log(`🌟 TOOL: buscar_tendencias | Args:`, JSON.stringify(args));
         try {
-            const trendModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const trendModel = genAI.getGenerativeModel({ model: "gemini-3.1-pro-preview-customtools" });
             const prompt = `Você é um analista de tendências de marketing digital. Pesquise e liste as 5 principais tendências ATUAIS (março de 2026) para o nicho "${args.nicho}"${args.plataforma ? ` na plataforma ${args.plataforma}` : ''}.
 
 Para cada tendência, forneça:
