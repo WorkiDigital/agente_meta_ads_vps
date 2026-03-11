@@ -55,7 +55,10 @@ Ele disse: "${texto}"
 Responda de forma curta e objetiva.`;
     
     const result = await model.generateContent(prompt);
-    return result.response.text();
+    const resposta = result.response.text();
+    const dataHora = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
+    
+    return `${resposta}\n\n🕒 ${dataHora} (V2)`;
   } catch (err) {
     return "❌ Erro na IA: " + err.message;
   }
