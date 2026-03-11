@@ -1,0 +1,10 @@
+# .dockerignore
+# Data: 11/03/2026
+
+node_modules
+npm-debug.log
+.git
+.env
+posts/
+debug_post.log
+*.js.map
