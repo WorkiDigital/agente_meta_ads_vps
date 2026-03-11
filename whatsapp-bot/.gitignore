@@ -1,0 +1,17 @@
+# Variáveis de ambiente (nunca versionar chaves reais)
+.env
+.env.local
+.env.production
+
+# Dependências
+node_modules/
+
+# Posts gerados localmente
+posts/
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+*.tmp
