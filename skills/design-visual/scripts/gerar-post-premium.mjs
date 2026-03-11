@@ -1,3 +1,4 @@
+import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -23,8 +24,9 @@ if (jsonIdx !== -1) {
     console.error('❌ Informe o JSON com --json "{...}" ou um arquivo com --file "caminho.json"');
     process.exit(1);
 }
-const designer = new DesignerService(path.join(__dirname, ".."));
-const copy = new CopyService(path.join(__dirname, ".."));
+const projectRoot = path.join(__dirname, "..", "..", "..");
+const designer = new DesignerService(projectRoot);
+const copy = new CopyService(projectRoot);
 
 async function main() {
     const { tipo, pasta_destino, slides, tema, nicho, tom_de_voz } = config;

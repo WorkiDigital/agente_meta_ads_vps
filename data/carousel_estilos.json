@@ -1,0 +1,43 @@
+{
+  "tipo": "carrossel",
+  "pasta_destino": "2026-03-11/demo-formatos",
+  "tema": "Demo de Formatos de Design",
+  "slides": [
+    {
+      "modelo": "02",
+      "texto": "MODELO 02: Editorial\n\nEste é o padrão Magazine, alinhado à esquerda com foto embaixo.",
+      "promptImagem": "Futuristic digital city with AI nodes glowing, cinematic.",
+      "nome_arquivo": "slide-01.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "MODELO 02: Central\n\nAqui a imagem fica no meio, dividindo o conteúdo de forma equilibrada.",
+      "promptImagem": "Abstract AI neural brain connection, 8k, bokeh.",
+      "nome_arquivo": "slide-02.jpg"
+    },
+    {
+      "modelo": "01",
+      "texto": "MODELO 01: Fundo Total\n\nA imagem ocupa 100% da tela. Ideal para capas de alto impacto visual.",
+      "promptImagem": "Cyberpunk robotic hand holding an iPhone, intense neon lighting.",
+      "nome_arquivo": "slide-03.jpg"
+    },
+    {
+      "modelo": "03",
+      "texto": "MODELO 03: Moldura Fixa\n\nUtilizando as molduras em PNG que você enviou originalmente.",
+      "promptImagem": "Modern office setup with clean aesthetics.",
+      "nome_arquivo": "slide-04.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "Alternando posições...\n\nO sistema decide a melhor posição para o texto não cobrir a imagem.",
+      "promptImagem": "Artificial Intelligence chip glowing, macro photography.",
+      "nome_arquivo": "slide-05.jpg"
+    },
+    {
+      "modelo": "01",
+      "texto": "Versatilidade Máxima\n\nVocê escolhe o modelo no JSON e o designer faz o resto.",
+      "promptImagem": "Galaxy nebula in the shape of an Instagram icon.",
+      "nome_arquivo": "slide-06.jpg"
+    }
+  ]
+}

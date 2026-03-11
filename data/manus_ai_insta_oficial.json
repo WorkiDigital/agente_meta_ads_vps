@@ -1,0 +1,62 @@
+{
+  "tipo": "carrossel",
+  "pasta_destino": "2026-03-11/manus-ai-oficial",
+  "tema": "Conexão Manus AI e Instagram",
+  "slides": [
+    {
+      "modelo": "02",
+      "texto": "🚨 A Meta pode ter acabado de mudar o jogo do Instagram.\n\nAgora você poderá usar Manus AI conectada diretamente ao seu Instagram.",
+      "promptImagem": "Manus AI Instagram connectors interface, high tech futuristic dashboard, clean UI.",
+      "caminhoImagemLocal": "C:\\Users\\Samsung\\.gemini\\antigravity\\brain\\d656dc86-8cdc-45f3-ae2c-c6b3e04b0584\\media__1773234178387.png",
+      "nome_arquivo": "slide-01.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "Até agora, usar IA no Instagram sempre foi complicado.\n\nEra preciso usar:\n\n• ferramentas externas\n• automações limitadas\n• APIs complexas\n• integrações cheias de erro\n\nTudo funcionando fora da plataforma.",
+      "promptImagem": "Complex messy wiring and error screens on a phone screen, frustrated entrepreneur silhouette, dark background, cinematic lighting.",
+      "nome_arquivo": "slide-02.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "Mas isso pode estar mudando.\n\nCom a Manus AI, a inteligência artificial poderá se conectar diretamente ao Instagram.\n\nSem intermediários.",
+      "promptImagem": "A bright cyan digital light beam connecting an 'AI' glowing orb directly to an Instagram app icon on a levitating glass smartphone, seamless and clean.",
+      "nome_arquivo": "slide-03.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "Isso significa que a IA pode ajudar em tarefas como:\n\n• criação de conteúdo\n• análise de desempenho\n• organização de posts\n• otimização de estratégia",
+      "promptImagem": "Futuristic transparent holographic dashboard showing social media growth charts, post calendar, and audience analytics in neon blue.",
+      "nome_arquivo": "slide-04.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "Estamos entrando em uma nova fase das redes sociais:\n\n🤖 redes sociais operadas com ajuda de IA\n\nOnde parte da operação pode ser automatizada.",
+      "promptImagem": "A high-tech robotic hand holding a smartphone scrolling through an Instagram feed, showing automated interactions, cinematic studio lighting.",
+      "nome_arquivo": "slide-05.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "Mas existe um ponto muito importante.\n\nA IA pode executar tarefas…\n\nMas não substitui estratégia, posicionamento e criatividade humana.",
+      "promptImagem": "A human brain made of glowing golden light floating beside a cold metallic AI microchip, symbolizing superiority of human creativity.",
+      "nome_arquivo": "slide-06.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "Isso muda o jogo para dois tipos de pessoas:\n\n❌ quem apenas executa tarefas\n✅ quem entende de estratégia e comunicação",
+      "promptImagem": "Two sides: One with many identical gray robots, the other with a single human chess master moving pieces on a glowing digital board.",
+      "nome_arquivo": "slide-07.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "A nova geração do marketing digital será:\n\nIA + estratégia humana.\n\nQuem aprender a usar essas ferramentas primeiro vai sair na frente.",
+      "promptImagem": "Man standing in front of a giant digital screen controlling an AI system with hand gestures, vision of the future marketing professional.",
+      "nome_arquivo": "slide-08.jpg"
+    },
+    {
+      "modelo": "02",
+      "texto": "🚀 A IA está mudando o marketing digital mais rápido do que nunca.\n\nSe você quer entender antes da maioria,\n👉 clica em seguir agora e acompanha os próximos conteúdos.",
+      "promptImagem": "A glowing upwards green arrow piercing through clouds of social media icons, symbolizing rapid growth and success in the AI era.",
+      "nome_arquivo": "slide-09.jpg"
+    }
+  ]
+}
