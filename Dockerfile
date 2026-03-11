@@ -24,5 +24,5 @@ COPY . .
 # Expõe a porta do Webhook
 EXPOSE 3000
 
-# Comando para iniciar o webhook com env-file nativo
-CMD ["node", "--env-file=.env", "skills/cerebro-coordenacao/scripts/webhook.js"]
+# Comando para iniciar o webhook (as variáveis devem ser injetadas pelo painel de deploy)
+CMD ["node", "skills/cerebro-coordenacao/scripts/webhook.js"]
