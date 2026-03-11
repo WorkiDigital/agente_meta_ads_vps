@@ -60,6 +60,7 @@ export class DesignerService {
             bgBuffer = fs.readFileSync(caminhoImagemLocal);
         } else if (promptImagem) {
             try {
+                // Tenta o modelo principal Imagen 4.0
                 const res = await genAI.models.generateImages({
                     model: "imagen-4.0-fast-generate-001",
                     prompt: promptImagem + " cinematic, highly detailed, photorealistic, 8k, no text",
@@ -69,7 +70,25 @@ export class DesignerService {
                 if (imgs.length > 0 && imgs[0].image?.imageBytes) {
                     bgBuffer = Buffer.from(imgs[0].image.imageBytes, "base64");
                 }
-            } catch (e) { console.error(`❌ Imagen ERRO:`, e.message); }
+            } catch (e) {
+                console.warn(`⚠️ Imagen 4.0 falhou (Quota ou Erro): ${e.message}. Tentando fallback...`);
+                try {
+                    // FALLBACK: Modelo experimental via generateContent
+                    const fallbackRes = await genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" }).generateContent({
+                        contents: [{ role: "user", parts: [{ text: promptImagem }] }],
+                        config: { responseModalities: ["IMAGE"] }
+                    });
+                    const parts = fallbackRes.response.candidates[0].content.parts;
+                    for (const part of parts) {
+                        if (part.inlineData) {
+                            bgBuffer = Buffer.from(part.inlineData.data, "base64");
+                            break;
+                        }
+                    }
+                } catch (fallbackError) {
+                    console.error(`❌ Fallback de imagem também falhou:`, fallbackError.message);
+                }
+            }
         }
         if (!bgBuffer) bgBuffer = await sharp({ create: { width: 400, height: 400, channels: 4, background: {r: 50, g:50, b:70, alpha:1} } }).png().toBuffer();
 
