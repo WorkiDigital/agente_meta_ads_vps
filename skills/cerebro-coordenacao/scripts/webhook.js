@@ -123,7 +123,7 @@ async function processarComIA(numero, texto) {
   if (!genAI) return "⚠️ Gemini API não configurada.";
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     
     // Contexto para o Agente saber quem é e o que pode fazer
     const prompt = `Você é o Agente Estrategista, um especialista em marketing digital e automação.
