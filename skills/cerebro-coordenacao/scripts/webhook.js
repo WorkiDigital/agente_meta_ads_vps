@@ -208,6 +208,7 @@ app.post("/webhook", async (req, res) => {
     if (mensagem?.key?.fromMe) return;
 
     const remoteJid = mensagem?.key?.remoteJid || "";
+    if (remoteJid.includes("@g.us")) return;
 
     // Suporte ao novo formato @lid do WhatsApp
     const participant = mensagem?.key?.participant || remoteJid;
