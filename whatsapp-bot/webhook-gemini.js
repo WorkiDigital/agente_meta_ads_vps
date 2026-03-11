@@ -381,7 +381,7 @@ const functionHandlers = {
         const script = args.tipo === "carrossel" ? "postar-carrosel-instagram.mjs" : "postar-unico-instagram.mjs";
 
         return new Promise((resolve) => {
-            execFile(process.execPath, [script, "--pasta", pastaRelativa, "--caption", args.legenda], { cwd: __dirname }, (error, stdout) => {
+            execFile(process.execPath, [script, "--pasta", pastaRelativa, "--caption", args.legenda], { cwd: __dirname, timeout: 300000, maxBuffer: 10 * 1024 * 1024 }, (error, stdout) => {
                 if (error) resolve(`Erro na publicação: ${error.message}`);
                 const matchLink = stdout.match(/https:\/\/www\.instagram\.com\/p\/[a-zA-Z0-9_-]+\//);
                 resolve(matchLink ? `Post publicado com sucesso! Link: ${matchLink[0]}` : "Post publicado com sucesso!");
@@ -795,5 +795,5 @@ app.listen(PORT, "0.0.0.0", () => {
     const agora = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
     console.log(`🚀 Agente VPS Online (Multimodal + Tools + Memória Persistente) na porta ${PORT}`);
     console.log(`📅 Iniciado em: ${agora} (Horário de Fortaleza)`);
-    console.log(`🔖 Versão deployada: fix/timeout-evolution-api-v3`);
+    console.log(`🔖 Versão deployada: fix/content-type-execfile-v4`);
 });
