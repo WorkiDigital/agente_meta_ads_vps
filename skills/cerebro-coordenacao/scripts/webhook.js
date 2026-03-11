@@ -27,164 +27,123 @@ const AUTHORIZED_NUMBERS = ["558598372658", "558592494552"];
 
 const evolutionApi = axios.create({
   baseURL: EVOLUTION_URL,
-  headers: {
-    "apikey": EVOLUTION_API_KEY,
-    "Content-Type": "application/json"
-  }
+  headers: { "apikey": EVOLUTION_API_KEY }
 });
 
-// Estado em memória
-const usuariosAutorizados = {}; // { numero: nome }
-const sessoes = {};             // { numero: uuid } — session-id do Claude Code
+const usuariosAutorizados = {};
+const sessoes = {};
 const emProcessamento = new Set();
 
-// Inicializa autorizados pré-definidos
-for (const n of AUTHORIZED_NUMBERS) {
-  usuariosAutorizados[n] = n;
-}
+// Adiciona números pré-autorizados ao mapa
+AUTHORIZED_NUMBERS.forEach(n => usuariosAutorizados[n] = "Usuário VIP");
 
-function detectarPedidoImagem(texto) {
-  const t = texto.toLowerCase();
-  return (
-    t.includes("gerar imagem") || t.includes("criar imagem") ||
-    t.includes("gera imagem") || t.includes("cria imagem") ||
-    t.includes("me manda uma imagem") || t.includes("desenha") ||
-    t.includes("ilustra") || t.includes("gere uma imagem") ||
-    t.includes("crie uma imagem")
-  );
-}
-
-async function gerarImagem(prompt) {
-  const resultado = await genAI.models.generateContent({
-    model: "gemini-2.0-flash-exp-image-generation",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: { responseModalities: ["TEXT", "IMAGE"] },
-  });
-  for (const part of resultado.candidates[0].content.parts) {
-    if (part.inlineData) return part.inlineData.data;
-  }
-  return null;
-}
-
-async function enviarImagem(numero, base64, legenda) {
-  try {
-    await evolutionApi.post(`/message/sendMedia/${EVOLUTION_INSTANCE}`, {
-      number: numero,
-      mediatype: "image",
-      mimetype: "image/png",
-      caption: legenda,
-      media: base64,
-    });
-  } catch (e) {
-    console.error("Erro ao enviar imagem:", e.message);
-  }
-}
-
-async function enviarMensagem(numero, texto) {
+/**
+ * Envia mensagem via Evolution API
+ */
+async function enviarMensagem(to, text) {
   try {
     await evolutionApi.post(`/message/sendText/${EVOLUTION_INSTANCE}`, {
-      number: numero,
-      text: texto
+      number: to,
+      text: text,
+      delay: 1200,
+      linkPreview: true
     });
-  } catch (e) {
-    console.error("Erro ao enviar msg:", e.message);
+  } catch (err) {
+    console.error("Erro ao enviar mensagem:", err.response?.data || err.message);
   }
 }
 
-async function enviarDigitando(numero) {
+/**
+ * Envia imagem via Evolution API
+ */
+async function enviarImagem(to, base64, caption) {
+  try {
+    await evolutionApi.post(`/message/sendMedia/${EVOLUTION_INSTANCE}`, {
+      number: to,
+      media: base64,
+      mediatype: "image",
+      caption: caption,
+      delay: 1200
+    });
+  } catch (err) {
+    console.error("Erro ao enviar imagem:", err.response?.data || err.message);
+  }
+}
+
+/**
+ * Envia indicador de "digitando"
+ */
+async function enviarDigitando(to) {
   try {
     await evolutionApi.post(`/chat/sendPresence/${EVOLUTION_INSTANCE}`, {
-      number: `${numero}@s.whatsapp.net`,
-      options: { presence: "composing", delay: 1200 }
+      number: to,
+      presence: "composing",
+      delay: 0
     });
-  } catch (_) {
-    // presença é opcional, não bloqueia
+  } catch (err) {
+    // Silencioso
   }
 }
 
-function quebrarEmChunks(texto, limite) {
-  if (texto.length <= limite) return [texto];
-
+/**
+ * Quebra texto longo em pedaços
+ */
+function quebrarEmChunks(texto, size) {
   const chunks = [];
-  let restante = texto;
-
-  while (restante.length > 0) {
-    if (restante.length <= limite) {
-      chunks.push(restante);
-      break;
-    }
-
-    let corte = restante.lastIndexOf("\n\n", limite);
-    if (corte < limite * 0.5) corte = restante.lastIndexOf("\n", limite);
-    if (corte < limite * 0.3) corte = restante.lastIndexOf(" ", limite);
-    if (corte <= 0) corte = limite;
-
-    chunks.push(restante.slice(0, corte).trim());
-    restante = restante.slice(corte).trim();
+  for (let i = 0; i < texto.length; i += size) {
+    chunks.push(texto.substring(i, i + size));
   }
-
-  return chunks.filter(c => c.length > 0);
+  return chunks;
 }
 
-async function executarClaudeCode(numero, mensagem) {
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
+/**
+ * Detecta se o usuário quer gerar uma imagem
+ */
+function detectarPedidoImagem(texto) {
+  const t = texto.toLowerCase();
+  return t.includes("gerar imagem") || t.includes("crie uma imagem") || t.includes("gere uma imagem");
+}
 
-  const args = [
-    "--print",
-    "--dangerously-skip-permissions",
-    "--output-format", "text"
-  ];
+/**
+ * Gera imagem via Gemini
+ */
+async function gerarImagem(prompt) {
+  if (!genAI) return null;
+  // Fallback implementado no DesignerService, aqui apenas chamamos a IA
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+  // Nota: Gemini Pro não gera imagens diretamente aqui. 
+  // O ideal é que o bot responda e os scripts de Skill façam o trabalho.
+  return null; 
+}
 
-  // Usar session existente ou criar nova
-  if (sessoes[numero]) {
-    args.push("--resume", sessoes[numero]);
-  } else {
-    const novoId = randomUUID();
-    sessoes[numero] = novoId;
-    args.push("--session-id", novoId);
+/**
+ * Usa o Gemini 1.5 Pro para processar a mensagem e responder ou agir
+ */
+async function processarComIA(numero, texto) {
+  if (!genAI) return "⚠️ Gemini API não configurada.";
+
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    
+    // Contexto para o Agente saber quem é e o que pode fazer
+    const prompt = `Você é o Agente Estrategista, um especialista em marketing digital e automação.
+Seu objetivo é ajudar o usuário a gerenciar posts no Instagram e analisar métricas.
+Você tem acesso a ferramentas de postagem (unico e carrossel) e relatórios de insights via scripts Node.js na VPS.
+
+Usuário pediu: "${texto}"
+
+Instruções:
+- Se ele pedir para gerar um post novo, diga que você vai preparar o design e a copy.
+- Se ele pedir relatórios, mencione que vai consultar os dados da Meta.
+- Responda de forma curta e profissional.`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (err) {
+    console.error("Erro no Gemini:", err.message);
+    return "❌ Erro ao processar com IA: " + err.message;
   }
-
-  return new Promise((resolve, reject) => {
-    const proc = spawn(CLAUDE_BIN, args, {
-      env,
-      cwd: WORK_DIR,
-      stdio: ["pipe", "pipe", "pipe"]
-    });
-
-    proc.stdout.setEncoding("utf8");
-    proc.stderr.setEncoding("utf8");
-
-    let output = "";
-    let erro = "";
-
-    proc.stdin.write(mensagem);
-    proc.stdin.end();
-
-    proc.stdout.on("data", (d) => output += d);
-    proc.stderr.on("data", (d) => erro += d);
-
-    const timer = setTimeout(() => {
-      proc.kill();
-      reject(new Error("Timeout"));
-    }, CLAUDE_TIMEOUT_MS);
-
-    proc.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0 && output.trim()) {
-        resolve(output.trim());
-      } else if (output.trim()) {
-        // saiu com erro mas tem output — retorna mesmo assim
-        resolve(output.trim());
-      } else {
-        // sessão pode ter expirado, tentar sem --resume
-        if (erro.includes("session") || erro.includes("resume")) {
-          delete sessoes[numero];
-        }
-        reject(new Error(erro.slice(0, 200) || `Saiu com código ${code}`));
-      }
-    });
-  });
 }
 
 // Middleware de log
@@ -201,19 +160,15 @@ app.post("/webhook", async (req, res) => {
 
   try {
     const body = req.body;
-
     if (!["messages.upsert", "MESSAGES_UPSERT"].includes(body.event)) return;
 
     const mensagem = body.data;
     if (mensagem?.key?.fromMe) return;
 
     const remoteJid = mensagem?.key?.remoteJid || "";
-    if (remoteJid.includes("@g.us")) return;
+    if (remoteJid.includes("@g.us")) return; // Bloqueio de grupos conforme pedido
 
-    // Suporte ao novo formato @lid do WhatsApp
     const participant = mensagem?.key?.participant || remoteJid;
-
-    // Extração robusta do número (remove sufixos e domínios)
     const numero = participant.split('@')[0].split(':')[0];
     const destino = remoteJid;
 
@@ -225,76 +180,29 @@ app.post("/webhook", async (req, res) => {
 
     console.log(`📩 De: ${numero} (${nome}) | No chat: ${destino}`);
 
-    const cmd = texto.trim().toLowerCase();
-
-    // Ativação por senha
-    if (cmd === "wrkcode") {
-      usuariosAutorizados[numero] = nome;
-      await enviarMensagem(numero, `✅ Olá, ${nome}! Acesso liberado. Pode enviar seus comandos.`);
-      return;
-    }
-
+    // Verifica autorização
     if (!usuariosAutorizados[numero]) {
-      console.log(`🚫 Não autorizado: ${nome} (${numero})`);
-      return;
+       // Se não for autorizado, ignora completamente
+       return;
     }
 
-    // Comandos especiais
-    if (cmd === "sair" || cmd === "logout") {
-      delete usuariosAutorizados[numero];
-      delete sessoes[numero];
-      await enviarMensagem(numero, "👋 Acesso encerrado. Envie *wrkcode* para voltar.");
-      return;
-    }
-
-    if (cmd === "nova conversa") {
-      delete sessoes[numero];
-      await enviarMensagem(numero, "🔄 Nova conversa iniciada. Qual é seu primeiro comando?");
-      return;
-    }
-
-    if (cmd === "status") {
-      const temSessao = !!sessoes[numero];
-      const msg = temSessao
-        ? `🟢 Sessão ativa\nID: ...${sessoes[numero].slice(-8)}\nPasta: ${WORK_DIR}`
-        : `🟡 Sem sessão ativa ainda\nPasta: ${WORK_DIR}`;
-      await enviarMensagem(numero, msg);
-      return;
-    }
-
-    // Geração de imagem via Gemini
-    if (genAI && detectarPedidoImagem(texto)) {
-      await enviarMensagem(numero, "🎨 Gerando sua imagem, aguarde...");
-      try {
-        const base64 = await gerarImagem(texto);
-        if (base64) {
-          await enviarImagem(numero, base64, texto);
-          console.log(`🖼️ Imagem enviada para ${numero}`);
-        } else {
-          await enviarMensagem(numero, "Não consegui gerar a imagem. Tente descrever melhor.");
-        }
-      } catch (err) {
-        console.error("Erro ao gerar imagem:", err.message);
-        await enviarMensagem(numero, "❌ Erro ao gerar imagem. Tente novamente.");
-      }
-      return;
-    }
+    const cmd = texto.trim().toLowerCase();
 
     // Guard para mensagens simultâneas
     if (emProcessamento.has(numero)) {
-      await enviarMensagem(numero, "⏳ Aguarde, ainda estou processando sua mensagem anterior...");
+      await enviarMensagem(destino, "⏳ Aguarde, estou processando sua mensagem anterior...");
       return;
     }
 
     emProcessamento.add(numero);
 
     // Indicador de digitando
-    const digitandoInterval = setInterval(() => enviarDigitando(numero), 20000);
-    await enviarDigitando(numero);
+    const digitandoInterval = setInterval(() => enviarDigitando(destino), 20000);
+    await enviarDigitando(destino);
 
     try {
       const inicio = Date.now();
-      const resposta = await executarClaudeCode(numero, texto);
+      const resposta = await processarComIA(numero, texto);
       const duracao = ((Date.now() - inicio) / 1000).toFixed(1);
 
       console.log(`🤖 Resposta para ${nome} (${duracao}s): ${resposta.substring(0, 100)}`);
@@ -303,19 +211,11 @@ app.post("/webhook", async (req, res) => {
 
       for (let i = 0; i < chunks.length; i++) {
         if (i > 0) await new Promise(r => setTimeout(r, 500));
-        await enviarMensagem(numero, chunks[i]);
+        await enviarMensagem(destino, chunks[i]);
       }
     } catch (err) {
       console.error(`❌ Erro ao processar mensagem de ${nome}:`, err.message);
-
-      let msgErro = "❌ Ocorreu um erro ao processar sua mensagem.";
-      if (err.message === "Timeout") {
-        msgErro = `⏱️ A operação demorou mais de ${CLAUDE_TIMEOUT_MS / 60000} minutos. Tente um comando mais simples.`;
-      } else if (err.message.includes("auth")) {
-        msgErro = "🔐 Erro de autenticação do Claude Code. Verifique a configuração.";
-      }
-
-      await enviarMensagem(numero, msgErro);
+      await enviarMensagem(destino, "❌ Ocorreu um erro ao processar sua mensagem.");
     } finally {
       clearInterval(digitandoInterval);
       emProcessamento.delete(numero);
@@ -330,8 +230,7 @@ app.get("/", (req, res) => {
   res.json({
     status: "online",
     workDir: WORK_DIR,
-    autorizados: Object.keys(usuariosAutorizados).length,
-    sessoesAtivas: Object.keys(sessoes).length
+    autorizados: AUTHORIZED_NUMBERS
   });
 });
 
