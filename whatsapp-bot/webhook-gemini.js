@@ -793,5 +793,5 @@ app.listen(PORT, "0.0.0.0", () => {
     const agora = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
     console.log(`🚀 Agente VPS Online (Multimodal + Tools + Memória Persistente) na porta ${PORT}`);
     console.log(`📅 Iniciado em: ${agora} (Horário de Fortaleza)`);
-    console.log(`🔖 Versão deployada: fix/path-undefined-slides-4-8`);
+    console.log(`🔖 Versão deployada: fix/path-undefined-completo-v2`);
 });

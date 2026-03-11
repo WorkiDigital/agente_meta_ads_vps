@@ -95,6 +95,9 @@ export class DesignerService {
         }
 
         const brandData = this.readBrand();
+        if (!brandData || !brandData.profile) {
+            throw new Error("DesignerService: brand.json não encontrado ou inválido. Verifique o arquivo data/brand.json.");
+        }
         const profile = brandData.profile;
 
         // 1. Imagem ilustrativa gerada via Imagen 4.0 Fast (com retry automático)

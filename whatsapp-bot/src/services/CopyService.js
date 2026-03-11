@@ -121,6 +121,9 @@ Retorne APENAS a legenda completa pronta para colar no Instagram. Nada de explic
      * @returns {string} Caminho do arquivo salvo
      */
     salvarLegenda(legendaCompleta, pastaDestino, nomeArquivo = "legenda.txt") {
+        if (typeof pastaDestino !== 'string' || !pastaDestino) {
+            throw new Error(`CopyService: 'pastaDestino' é obrigatório. Recebido: ${JSON.stringify(pastaDestino)}`);
+        }
         const outDir = path.join(this.basePath, "posts", pastaDestino);
         if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
         const filePath = path.join(outDir, nomeArquivo);
