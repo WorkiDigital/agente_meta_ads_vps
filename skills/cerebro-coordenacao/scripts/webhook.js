@@ -6,7 +6,9 @@ import { randomUUID } from "crypto";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
-app.use(express.json());
+// Aumenta o limite para suportar payloads grandes da Evolution API (ex: sincronização de contatos)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const EVOLUTION_URL = process.env.EVOLUTION_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
