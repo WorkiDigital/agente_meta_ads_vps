@@ -1,9 +1,15 @@
 const fs = require('fs');
+const path = require('path');
 
 function processReport() {
-    const data = JSON.parse(fs.readFileSync('90days_report.json', 'utf8'));
+    const dataFile = path.resolve(process.cwd(), '90days_report.json');
+    if (!fs.existsSync(dataFile)) {
+        console.error(`❌ Erro: ${dataFile} não encontrado.`);
+        process.exit(1);
+    }
 
-    // Calcular engajamento total (curtidas + comentários + salvamentos se tiver) e extrair reach e plays
+    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+
     const processed = data.map(post => {
         let reach = 0;
         let plays = 0;
@@ -36,43 +42,29 @@ function processReport() {
         };
     });
 
-    // Top Engajamento
     const topEngagement = [...processed].sort((a, b) => b.totalEngagement - a.totalEngagement).slice(0, 5);
-
-    // Top Alcance
     const topReach = [...processed].sort((a, b) => b.reach - a.reach).slice(0, 5);
-
-    // Top Curtidas
     const topLikes = [...processed].sort((a, b) => b.likes - a.likes).slice(0, 5);
 
     let reportMD = `# Relatório de Desempenho - Últimos 90 Dias (@hericksonmaia)\n\n`;
     reportMD += `Período analisado: Últimos 90 dias. Total de posts extraídos: ${processed.length}.\n\n`;
 
-    reportMD += `## 🔥 Top 5 Posts por Maior Engajamento (Curtidas + Comentários + Salvamentos)\n`;
+    reportMD += `## 🔥 Top 5 Posts por Maior Engajamento\n`;
     topEngagement.forEach((p, i) => {
-        reportMD += `${i + 1}. **[${p.type}]** ${p.date} - Engajamento: **${p.totalEngagement}** (Alcance: ${p.reach})\n`;
+        reportMD += `${i + 1}. **[${p.type}]** ${p.date} - Engajamento: **${p.totalEngagement}**\n`;
         reportMD += `   - 🔗 [Acessar Post](${p.permalink})\n`;
         reportMD += `   - 📝 "${p.caption}"\n`;
     });
 
     reportMD += `\n## 👁️ Top 5 Posts por Maior Alcance (Reach)\n`;
     topReach.forEach((p, i) => {
-        reportMD += `${i + 1}. **[${p.type}]** ${p.date} - Alcance: **${p.reach}** (Engajamento: ${p.totalEngagement})\n`;
+        reportMD += `${i + 1}. **[${p.type}]** ${p.date} - Alcance: **${p.reach}**\n`;
         reportMD += `   - 🔗 [Acessar Post](${p.permalink})\n`;
-        reportMD += `   - 📝 "${p.caption}"\n`;
     });
 
-    reportMD += `\n## ❤️ Top 5 Posts por Mais Curtidas\n`;
-    topLikes.forEach((p, i) => {
-        reportMD += `${i + 1}. **[${p.type}]** ${p.date} - Curtidas: **${p.likes}**\n`;
-        reportMD += `   - 🔗 [Acessar Post](${p.permalink})\n`;
-        reportMD += `   - 📝 "${p.caption}"\n`;
-    });
-
-    reportMD += `\n*Nota sobre seguidores: A API da Meta (Graph API) não fornece diretamente métricas individuais de 'novos seguidores gerados por cada post' (Followers by Post) para contas padrão. Apenas alcance, compartilhamentos salvamentos e interações.*`;
-
-    fs.writeFileSync('C:\\Users\\Samsung\\.gemini\\antigravity\\brain\\1e235fc9-ab17-4ae9-a248-01185c1f8c47\\relatorio_90dias.md', reportMD);
-    console.log("Relatório gerado em Markdown.");
+    const outPath = path.resolve(process.cwd(), 'relatorio_90dias.md');
+    fs.writeFileSync(outPath, reportMD);
+    console.log(`✅ Relatório gerado em: ${outPath}`);
 }
 
 processReport();

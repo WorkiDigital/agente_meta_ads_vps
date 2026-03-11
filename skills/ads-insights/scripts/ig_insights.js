@@ -1,8 +1,13 @@
 const axios = require('axios');
-const token = process.env.FACEBOOK_ACCESS_TOKEN || 'EAA8VGzZAxyqABQ66M3RbyMQgLyLUHPFSTUkOsG0Gkm4a74UvZChtt2iUEftJSMydUfg2bpx2rhtPJY2AZCqKmnEv6OH9SqX77aRihXA3ziBTmqeLV7rWx0kPpk4CZCt7zwkoBGTIU1nE1GQ1wDbIyIiuLbDZAI8Yu53kStqLFQwm9HOoWufiTzVDE43WX';
+const token = process.env.META_ACCESS_TOKEN;
 const igUserId = '17841401666623403'; // Herickson Maia - Tráfego Pago
 
 async function fetchPosts() {
+    if (!token) {
+        console.error('❌ Erro: META_ACCESS_TOKEN não definido.');
+        process.exit(1);
+    }
+    
     try {
         const r = await axios.get(`https://graph.facebook.com/v19.0/${igUserId}/media`, {
             params: {
@@ -18,6 +23,7 @@ async function fetchPosts() {
         console.log(JSON.stringify(sortedPosts.slice(0, 5), null, 2));
     } catch (e) {
         console.error(e.response ? JSON.stringify(e.response.data, null, 2) : e.message);
+        process.exit(1);
     }
 }
 
