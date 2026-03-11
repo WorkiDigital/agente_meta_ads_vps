@@ -13,11 +13,10 @@ posts/
 logs/
 *.log
 
-# Arquivos de desenvolvimento (apenas testes — postar-*.mjs são usados em produção!)
+# Arquivos de desenvolvimento
 archive/
 tmp_post.json
-gerar_teste.mjs
-teste_carrossel.mjs
+*.mjs
 
 # Git
 .git/

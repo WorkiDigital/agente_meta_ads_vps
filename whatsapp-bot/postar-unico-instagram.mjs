@@ -49,15 +49,13 @@ if (captionFileIdx >= 0) {
 async function uploadSupabase(filePath, fileName) {
   const fileBuffer = fs.readFileSync(filePath);
   const storagePath = `posts_temporarios/${Date.now()}_${fileName}`;
-  const ext = fileName.split('.').pop().toLowerCase();
-  const mimeType = ext === 'png' ? 'image/png' : 'image/jpeg';
 
   const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${storagePath}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'apikey': SUPABASE_KEY,
-      'Content-Type': mimeType,
+      'Content-Type': 'image/png',
       'x-upsert': 'true',
     },
     body: fileBuffer,
