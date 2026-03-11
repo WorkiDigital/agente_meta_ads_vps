@@ -171,6 +171,16 @@ const tools = [
                 }
             },
             {
+                name: "listar_contas_ads",
+                description: "Lista todas as contas de anúncio Meta Ads acessíveis pelo token. Use esta ferramenta quando o usuário mencionar o NOME de uma conta em vez do ID (ex: 'conta da Rodrigo', 'minha outra conta'). Retorna id e nome de cada conta para que você possa usar o ID correto nas demais ferramentas.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        nome_filtro: { type: "STRING", description: "Filtro parcial por nome da conta (opcional). Ex: 'rodrigo', 'performance'" }
+                    }
+                }
+            },
+            {
                 name: "buscar_criativos_ads",
                 description: "Busca os criativos (imagens, vídeos e thumbnails) dos anúncios ativos/recentes de uma conta Meta Ads.",
                 parameters: {
@@ -594,6 +604,44 @@ Seja específico e atual. Foque em dados e exemplos reais.`;
             return result.response.text();
         } catch (e) {
             return `Erro ao buscar tendências: ${e.message}`;
+        }
+    },
+    listar_contas_ads: async (_numero, args) => {
+        console.log(`🏦 TOOL: listar_contas_ads | Filtro:`, args.nome_filtro || "(todos)");
+        const META_TOKEN = process.env.META_ACCESS_TOKEN;
+        try {
+            const res = await axios.get("https://graph.facebook.com/v19.0/me/adaccounts", {
+                params: {
+                    access_token: META_TOKEN,
+                    fields: "id,name,account_status,currency,amount_spent",
+                    limit: 50
+                },
+                timeout: 30000
+            });
+
+            let contas = res.data?.data || [];
+
+            // Filtra por nome se informado
+            if (args.nome_filtro) {
+                const filtro = args.nome_filtro.toLowerCase();
+                contas = contas.filter(c => c.name?.toLowerCase().includes(filtro));
+            }
+
+            if (contas.length === 0) {
+                return args.nome_filtro
+                    ? `Nenhuma conta encontrada com o nome "${args.nome_filtro}".`
+                    : "Nenhuma conta de anúncio acessível encontrada.";
+            }
+
+            const statusLabel = (s) => ({ 1: "Ativa", 2: "Desativada", 3: "Não verificada", 7: "Arquivada", 9: "Pendente" }[s] || `Status ${s}`);
+
+            const linhas = contas.map(c =>
+                `• *${c.name}*\n  ID: \`${c.id}\` | ${statusLabel(c.account_status)} | ${c.currency} | Gasto: R$${(parseFloat(c.amount_spent || 0) / 100).toFixed(2)}`
+            ).join("\n\n");
+
+            return `📋 *${contas.length} conta(s) encontrada(s):*\n\n${linhas}`;
+        } catch (e) {
+            return `Erro ao listar contas: ${e.response?.data?.error?.message || e.message}`;
         }
     },
     buscar_criativos_ads: async (_numero, args) => {
