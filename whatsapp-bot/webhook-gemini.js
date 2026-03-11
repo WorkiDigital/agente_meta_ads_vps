@@ -263,23 +263,19 @@ const functionHandlers = {
             return "Erro: o parâmetro 'slides' deve ser um array não vazio.";
         }
         const totalSlides = args.slides.length;
-        await enviarMensagem(numero, `🎨 Gerando ${totalSlides} slides do seu post premium...`);
+        await enviarMensagem(numero, `🎨 Gerando ${totalSlides} slides... aguarde.`);
         const urlsGeradas = [];
         let slidesGerados = 0;
         let erros = 0;
 
         for (let i = 0; i < totalSlides; i++) {
-            // Pausa entre slides para evitar rate limit do Imagen API
             if (i > 0) await new Promise(r => setTimeout(r, 4000));
             await enviarMensagem(numero, `⏳ Gerando slide ${i + 1} de ${totalSlides}...`);
 
             const slide = args.slides[i];
             try {
-                // Garante que nome_arquivo nunca chegue como undefined ao DesignerService
                 const nomeArquivo = slide.nome_arquivo || `slide-${String(i + 1).padStart(2, '0')}.jpg`;
-                if (!slide.nome_arquivo) {
-                    console.warn(`⚠️ Slide ${i+1}: nome_arquivo ausente. Usando fallback: ${nomeArquivo}`);
-                }
+                if (!slide.nome_arquivo) console.warn(`⚠️ Slide ${i+1}: nome_arquivo ausente. Usando fallback: ${nomeArquivo}`);
                 if (!slide.texto) throw new Error(`Slide ${i+1} está sem o campo 'texto'.`);
                 if (!slide.promptImagem) throw new Error(`Slide ${i+1} está sem o campo 'promptImagem'.`);
 
@@ -291,13 +287,7 @@ const functionHandlers = {
                     nomeArquivo
                 });
 
-                if (result.publicUrl) urlsGeradas.push(result.publicUrl);
-
-                // Envia slide IMEDIATAMENTE como imagem inline (não espera todos)
-                if (result.localPath && fs.existsSync(result.localPath)) {
-                    const buf = fs.readFileSync(result.localPath);
-                    await enviarImagem(numero, buf.toString('base64'), `📸 Slide ${i+1} de ${totalSlides}`);
-                }
+                if (result.publicUrl) urlsGeradas.push({ num: i + 1, url: result.publicUrl });
                 slidesGerados++;
             } catch (slideErr) {
                 erros++;
@@ -306,7 +296,13 @@ const functionHandlers = {
             }
         }
 
-        // Gera legenda SEO
+        // Envia links de todos os slides de uma vez
+        if (urlsGeradas.length > 0) {
+            const linksMsg = urlsGeradas.map(s => `📸 *Slide ${s.num}:*\n${s.url}`).join('\n\n');
+            await enviarMensagem(numero, `✅ *${slidesGerados} slides prontos!*\n\n${linksMsg}`);
+        }
+
+        // Gera e envia legenda SEO com até 10 hashtags
         try {
             const textosSlides = args.slides.map(s => s.texto);
             const copyResult = await copy.gerarLegendaSEO({
@@ -317,13 +313,13 @@ const functionHandlers = {
             });
             copy.salvarLegenda(copyResult.legendaCompleta, args.pasta_destino);
             if (copyResult.legendaCompleta) {
-                await enviarMensagem(numero, `📝 *Legenda sugerida:*\n\n${copyResult.legendaCompleta}`);
+                await enviarMensagem(numero, `📝 *Legenda + Hashtags:*\n\n${copyResult.legendaCompleta}`);
             }
         } catch (copyErr) {
             console.error("Erro ao gerar legenda:", copyErr.message);
         }
 
-        return `Post gerado: ${slidesGerados}/${totalSlides} slides criados com sucesso${erros > 0 ? ` (${erros} erros)` : ''}. Pasta: ${args.pasta_destino}. ${urlsGeradas.length} salvos na nuvem.`;
+        return `Post gerado: ${slidesGerados}/${totalSlides} slides${erros > 0 ? ` (${erros} erros)` : ''}. Pasta: ${args.pasta_destino}.`;
     },
     publicar_no_instagram: async (numero, args) => {
         console.log(`🚀 TOOL: publicar_no_instagram | Args:`, JSON.stringify(args));

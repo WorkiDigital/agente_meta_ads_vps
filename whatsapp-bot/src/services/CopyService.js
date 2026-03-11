@@ -72,12 +72,11 @@ REGRAS OBRIGATÓRIAS:
    - Termine com um CTA claro (chamar para ação: comentar, salvar, compartilhar ou clicar no link da bio)
    - Use a técnica AIDA (Atenção, Interesse, Desejo, Ação)
 
-3. **BLOCO DE HASHTAGS (30 hashtags divididas em 3 categorias):**
-   Gere exatamente 30 hashtags divididas assim:
-   - 10 hashtags de ALTO VOLUME (>500k posts, termos amplos do nicho)
-   - 10 hashtags de NICHO (50k-500k posts, termos específicos do tema)
-   - 10 hashtags de MARCA/LONG-TAIL (termos ultra-específicos + marca pessoal)
-   Inclua sempre: #${handle.replace("@", "")}
+3. **BLOCO DE HASHTAGS (máximo 10 hashtags):**
+   Escolha as 10 hashtags mais estratégicas para o tema:
+   - Misture termos de alto volume, nicho e marca pessoal
+   - Inclua sempre: #${handle.replace("@", "")}
+   - Coloque todas na mesma linha separadas por espaço
 
 4. **FORMATAÇÃO:**
    - Separe o corpo das hashtags com uma linha "—"
