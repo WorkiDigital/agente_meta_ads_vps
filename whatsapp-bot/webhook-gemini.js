@@ -763,20 +763,24 @@ app.post("/webhook", async (req, res) => {
         await memory.addMessages(numero, [{ role: 'user', parts: content.map(c => c.text ? { text: c.text } : c) }]);
 
         let result = await chat.sendMessage(content);
-        let call = result.response.functionCalls()?.[0];
+        let calls = result.response.functionCalls() || [];
 
-        // Loop de Function Calling
-        while (call) {
-            const handler = functionHandlers[call.name];
-            const toolResponse = handler ? await handler(numero, call.args) : "Ferramenta não encontrada.";
-            
-            result = await chat.sendMessage([{
-                functionResponse: {
-                    name: call.name,
-                    response: { result: toolResponse }
-                }
-            }]);
-            call = result.response.functionCalls()?.[0];
+        // Loop de Function Calling — suporta múltiplas tool calls por turno
+        while (calls.length > 0) {
+            const responses = await Promise.all(calls.map(async (call) => {
+                console.log(`🔧 TOOL: ${call.name} | Args:`, JSON.stringify(call.args));
+                const handler = functionHandlers[call.name];
+                const toolResponse = handler ? await handler(numero, call.args) : `Ferramenta '${call.name}' não encontrada.`;
+                return {
+                    functionResponse: {
+                        name: call.name,
+                        response: { result: String(toolResponse) }
+                    }
+                };
+            }));
+
+            result = await chat.sendMessage(responses);
+            calls = result.response.functionCalls() || [];
         }
 
         const finalResponse = result.response.text();
