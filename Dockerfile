@@ -32,3 +32,4 @@ EXPOSE 3000
 
 # Comando para iniciar o webhook
 CMD ["node", "skills/cerebro-coordenacao/scripts/webhook.js"]
+# Build Force: 11/03/2026 20:05
