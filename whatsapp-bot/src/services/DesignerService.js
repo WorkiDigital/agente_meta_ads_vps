@@ -115,20 +115,28 @@ export class DesignerService {
                 const imgs = result.generatedImages || [];
                 if (imgs.length > 0 && imgs[0].image?.imageBytes) {
                     bgBuffer = Buffer.from(imgs[0].image.imageBytes, "base64");
-                    break; // sucesso — sai do loop
+                    break;
                 }
-                console.warn(`⚠️ Imagen tentativa ${tentativa}: sem imagem retornada.`);
+                console.warn(`⚠️ Imagen tentativa ${tentativa}: sem imagem retornada. Resposta completa:`, JSON.stringify(result).substring(0, 300));
             } catch (e) {
-                console.error(`❌ Imagen tentativa ${tentativa} falhou: ${e.message}`);
+                // Log detalhado para diagnóstico
+                const detalhe = e.response?.data ? JSON.stringify(e.response.data).substring(0, 300) : (e.stack || e.message);
+                console.error(`❌ Imagen tentativa ${tentativa} falhou — status: ${e.status || e.statusCode || 'N/A'} | msg: ${e.message} | detalhe: ${detalhe}`);
                 if (tentativa < MAX_TENTATIVAS) {
-                    const delay = tentativa * 3000; // 3s, 6s entre tentativas
+                    const delay = tentativa * 5000; // 5s, 10s entre tentativas
                     console.log(`⏳ Aguardando ${delay / 1000}s antes de tentar novamente...`);
                     await new Promise(r => setTimeout(r, delay));
                 }
             }
         }
 
-        if (!bgBuffer) throw new Error(`O Imagen falhou após ${MAX_TENTATIVAS} tentativas.`);
+        // Fallback: se o Imagen falhou, usa fundo degradê gerado pelo sharp
+        if (!bgBuffer) {
+            console.warn(`⚠️ Imagen indisponível — usando fundo fallback para ${nomeArquivo}`);
+            bgBuffer = await sharp({
+                create: { width: 920, height: 700, channels: 4, background: { r: 30, g: 30, b: 50, alpha: 1 } }
+            }).png().toBuffer();
+        }
 
         // 2. Dimensões do Card: 4:5 (1080x1350)
         const W = 1080;
