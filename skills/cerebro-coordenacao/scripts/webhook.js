@@ -15,7 +15,7 @@ const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE;
 const PORT = process.env.PORT || 3000;
 const WORK_DIR = process.env.WORK_DIR || process.cwd();
-const CLAUDE_BIN = process.env.CLAUDE_BIN || (process.platform === "win32" ? "C:\\Users\\Samsung\\.local\\bin\\claude.exe" : "claude");
+const CLAUDE_BIN = process.env.CLAUDE_BIN || "claude";
 const CHUNK_SIZE = parseInt(process.env.CHUNK_SIZE || "3500");
 const CLAUDE_TIMEOUT_MS = parseInt(process.env.CLAUDE_TIMEOUT_MS || "300000");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
