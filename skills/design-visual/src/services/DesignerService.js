@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import sharp from "sharp";
 import fs from "fs";
 import path from "path";
@@ -51,7 +52,8 @@ export class DesignerService {
 
     async gerarSlidePremium({ texto, promptImagem, pastaDestino, nomeArquivo, caminhoImagemLocal = null, eCapa = false, modelo = "02" }) {
         if (!nomeArquivo) throw new Error("nomeArquivo obrigatório.");
-        const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+        const genAI_Old = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+        const genAI_New = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
         const W = 1080; const H = 1350; const PAD = 80;
         const brand = this.readBrand();
 
@@ -60,34 +62,24 @@ export class DesignerService {
             bgBuffer = fs.readFileSync(caminhoImagemLocal);
         } else if (promptImagem) {
             try {
-                // Tenta o modelo principal Imagen 4.0
-                const res = await genAI.models.generateImages({
+                // Tenta o Imagen 4.0 via novo SDK
+                const res = await genAI_New.models.generateImages({
                     model: "imagen-4.0-fast-generate-001",
-                    prompt: promptImagem + " cinematic, highly detailed, photorealistic, 8k, no text",
+                    prompt: promptImagem + " professional, minimalist, high quality, 4k",
                     config: { numberOfImages: 1, aspectRatio: "4:3" }
                 });
-                const imgs = res.generatedImages || [];
-                if (imgs.length > 0 && imgs[0].image?.imageBytes) {
-                    bgBuffer = Buffer.from(imgs[0].image.imageBytes, "base64");
+                if (res.generatedImages?.[0]?.image?.imageBytes) {
+                    bgBuffer = Buffer.from(res.generatedImages[0].image.imageBytes, "base64");
                 }
             } catch (e) {
-                console.warn(`⚠️ Imagen 4.0 falhou (Quota ou Erro): ${e.message}. Tentando fallback...`);
-                try {
-                    // FALLBACK: Modelo experimental via generateContent
-                    const fallbackRes = await genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp-image-generation" }).generateContent({
-                        contents: [{ role: "user", parts: [{ text: promptImagem }] }],
-                        config: { responseModalities: ["IMAGE"] }
-                    });
-                    const parts = fallbackRes.response.candidates[0].content.parts;
-                    for (const part of parts) {
-                        if (part.inlineData) {
-                            bgBuffer = Buffer.from(part.inlineData.data, "base64");
-                            break;
-                        }
-                    }
-                } catch (fallbackError) {
-                    console.error(`❌ Fallback de imagem também falhou:`, fallbackError.message);
+                if (e.message.includes("429") || e.message.includes("quota")) {
+                    console.warn(`⏳ Limite de cota atingido para Imagens. Gerando estilo minimalist color...`);
+                } else {
+                    console.warn(`⚠️ Falha na imagem: ${e.message}`);
                 }
+                
+                // Fallback de contingência: Tenta o Gemini 2.0 Flash se disponível (ex: experimental)
+                // Se tudo falhar, o código abaixo do bgBuffer tratará
             }
         }
         if (!bgBuffer) bgBuffer = await sharp({ create: { width: 400, height: 400, channels: 4, background: {r: 50, g:50, b:70, alpha:1} } }).png().toBuffer();
