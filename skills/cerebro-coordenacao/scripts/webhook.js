@@ -18,6 +18,10 @@ const {
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const AUTHORIZED_NUMBERS = ["558598372658", "558592494552"];
 
+// Memória de contexto (Histórico de mensagens por número)
+const historicoConversas = {};
+const MAX_MENSAGENS = 20;
+
 const evolutionApi = axios.create({
   baseURL: EVOLUTION_URL,
   headers: { "apikey": EVOLUTION_API_KEY }
@@ -47,19 +51,39 @@ async function enviarPresence(to) {
 
 async function processarComIA(numero, texto) {
   if (!genAI) return "⚠️ Erro: GEMINI_API_KEY não configurada.";
+  
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    const prompt = `Você é o Agente Estrategista da WorkiDigital. 
-Ajude o usuário com marketing e posts. 
-Ele disse: "${texto}"
-Responda de forma curta e objetiva.`;
     
-    const result = await model.generateContent(prompt);
-    const resposta = result.response.text();
+    // Recupera ou cria histórico para o número
+    if (!historicoConversas[numero]) {
+      historicoConversas[numero] = [];
+    }
+
+    const chat = model.startChat({
+      history: historicoConversas[numero],
+      generationConfig: {
+        maxOutputTokens: 2048,
+      },
+    });
+
+    const result = await chat.sendMessage(texto);
+    const respostaString = result.response.text();
+
+    // Atualiza o histórico local (limita a 20 mensagens/objetos)
+    // O startChat consome o histórico no formato { role, parts: [{ text }] }
+    historicoConversas[numero].push({ role: "user", parts: [{ text: texto }] });
+    historicoConversas[numero].push({ role: "model", parts: [{ text: respostaString }] });
+
+    // Se passar de 20 (10 turnos de pergunta/resposta), remove os mais antigos
+    if (historicoConversas[numero].length > MAX_MENSAGENS) {
+      historicoConversas[numero] = historicoConversas[numero].slice(-MAX_MENSAGENS);
+    }
+
     const dataHora = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
-    
-    return `${resposta}\n\n🕒 ${dataHora} (V2)`;
+    return `${respostaString}\n\n🕒 ${dataHora} (Memory Active)`;
   } catch (err) {
+    console.error("Erro no Gemini:", err);
     return "❌ Erro na IA: " + err.message;
   }
 }
@@ -77,7 +101,7 @@ app.post("/webhook", async (req, res) => {
 
   if (!texto || !AUTHORIZED_NUMBERS.includes(numero)) return;
 
-  console.log(`📩 Mensagem de: ${numero}`);
+  console.log(`📩 Mensagem de: ${numero} (Histórico: ${historicoConversas[numero]?.length || 0})`);
   await enviarPresence(remoteJid);
   
   const resposta = await processarComIA(numero, texto);
@@ -89,8 +113,8 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => res.send("Bot Online 🚀"));
+app.get("/", (req, res) => res.json({ status: "online", memory: "enabled", limit: MAX_MENSAGENS }));
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Servidor rodando na porta ${PORT}`);
+  console.log(`✅ Servidor com MEMÓRIA rodando na porta ${PORT}`);
 });
