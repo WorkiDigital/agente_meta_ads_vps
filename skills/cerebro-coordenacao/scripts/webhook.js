@@ -68,24 +68,49 @@ function executarSkill(scriptPath, args = []) {
   });
 }
 
+/**
+ * Usa o Gemini para transformar o pedido em um JSON de Carrossel
+ */
+async function gerarJsonCarrossel(promptUsuario) {
+  if (!genAI) return null;
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  
+  const systemPrompt = `Transforme o pedido de carrossel do usuário em um JSON estruturado.
+FORMATO:
+{
+  "tipo": "carrossel",
+  "pasta_destino": "nome-unico",
+  "tema": "Titulo do Post",
+  "slides": [
+    { "texto": "texto do slide", "promptImagem": "prompt detalhado para imagem", "nome_arquivo": "slide1.jpg" }
+  ]
+}
+Gere prompts de imagem detalhados e técnicos (fotorealista, 4k, estilo premium).
+Retorne APENAS o JSON, sem markdown.`;
+
+  try {
+    const result = await model.generateContent(`${systemPrompt}\n\nPedido: ${promptUsuario}`);
+    const text = result.response.text().replace(/```json|```/g, "").trim();
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Erro ao gerar JSON:", e);
+    return null;
+  }
+}
+
 async function processarComIA(numero, texto, remoteJid) {
   if (!genAI) return "⚠️ Gemini API não configurada.";
   
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-    
     if (!historicoConversas[numero]) historicoConversas[numero] = [];
 
-    const chat = model.startChat({
-      history: historicoConversas[numero],
-    });
+    const chat = model.startChat({ history: historicoConversas[numero] });
 
-    const systemContext = `Você é o Agente Estrategista. Seu objetivo é ajudar o usuário e EXECUTAR ferramentas quando solicitado.
-FERRAMENTAS DISPONÍVEIS:
-1. Criar Carrossel: Se o usuário mandar lâminas ou pedir para criar artes de carrossel, responda confirmando e adicione a tag [TRIGGER:CARROSSEL] no fim da resposta.
-2. Ver Relatórios: Se pedir insights ou métricas, responda e adicione [TRIGGER:INSIGHTS].
-
-Peça desculpas se falhou antes e diga que agora vai executar.`;
+    const systemContext = `Você é o Agente Estrategista.
+FERRAMENTAS:
+- [TRIGGER:CARROSSEL]: Use quando o usuário confirmar que quer criar as artes/cards de um carrossel.
+Diga que está iniciando a produção.`;
 
     const result = await chat.sendMessage(`${systemContext}\n\nUsuário: ${texto}`);
     const respostaString = result.response.text();
@@ -97,12 +122,23 @@ Peça desculpas se falhou antes e diga que agora vai executar.`;
       historicoConversas[numero] = historicoConversas[numero].slice(-MAX_MENSAGENS);
     }
 
-    // Lógica de Gatilho (Trigger)
     if (respostaString.includes("[TRIGGER:CARROSSEL]")) {
-      await enviarMensagem(remoteJid, "🎨 Iniciando a geração das artes do carrossel agora mesmo... Isso pode levar alguns segundos.");
-      // Aqui dispararíamos o script de carrossel. Por enquanto vamos simular a chamada
-      // Nota: No próximo passo vamos conectar o JSON do carrossel ao script real.
-      executarSkill("skills/design-visual/scripts/gerar-post-premium.mjs", ["--prompt", texto]);
+      await enviarMensagem(remoteJid, "🎨 Convertendo seu conteúdo em design... Aguarde.");
+      
+      const configJson = await gerarJsonCarrossel(texto);
+      if (configJson) {
+        await enviarMensagem(remoteJid, "✨ JSON de Design gerado! Iniciando renderização das imagens...");
+        
+        const { code, output } = await executarSkill("skills/design-visual/scripts/gerar-post-premium.mjs", ["--json", JSON.stringify(configJson)]);
+        
+        if (code === 0) {
+          await enviarMensagem(remoteJid, `✅ Artes geradas com sucesso!\n\n${output.substring(0, 500)}`);
+        } else {
+          await enviarMensagem(remoteJid, "❌ Houve um erro na renderização das artes.");
+        }
+      } else {
+        await enviarMensagem(remoteJid, "❌ Não consegui estruturar o conteúdo do carrossel.");
+      }
     }
 
     const dataHora = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
@@ -130,12 +166,12 @@ app.post("/webhook", async (req, res) => {
   
   const chunks = resposta.match(/[\s\S]{1,3000}/g) || [];
   for (const chunk of chunks) {
-    await enviarMensagem(remoteJid, chunk);
+    if (chunk) await enviarMensagem(remoteJid, chunk);
   }
 });
 
-app.get("/", (req, res) => res.json({ status: "online", mode: "action" }));
+app.get("/", (req, res) => res.json({ status: "online", tools: ["carrossel"] }));
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Servidor de AÇÃO rodando na porta ${PORT}`);
+  console.log(`✅ Servidor de AÇÃO V2 rodando na porta ${PORT}`);
 });
