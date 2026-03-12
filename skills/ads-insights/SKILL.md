@@ -15,6 +15,7 @@ Esta habilidade fornece inteligência de dados ao sistema, permitindo que o Agen
 Localizado em `skills/ads-insights/scripts/`:
 - `generate_report.js`: Cria relatórios detalhados de performance.
 - `ig_insights.js`: Métricas específicas do Instagram.
+- `list_accounts.mjs`: Lista todas as contas de anúncios vinculadas ao token.
 
 ## 📊 Métricas Monitoradas
 - **CTR (Click-Through Rate)**: Eficácia do criativo.

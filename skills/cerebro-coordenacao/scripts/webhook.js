@@ -107,10 +107,12 @@ async function processarComIA(numero, texto, remoteJid) {
 
     const chat = model.startChat({ history: historicoConversas[numero] });
 
-    const systemContext = `Você é o Agente Estrategista.
-FERRAMENTAS:
-- [TRIGGER:CARROSSEL]: Use quando o usuário confirmar que quer criar as artes/cards de um carrossel.
-Diga que está iniciando a produção.`;
+    const systemContext = `Você é o Agente Estrategista, especialista em Meta Ads.
+FERRAMENTAS (Use apenas em caixa alta e entre colchetes):
+- [TRIGGER:CARROSSEL]: Use quando o usuário quiser criar artes/cards.
+- [TRIGGER:INSIGHTS]: Use quando o usuário pedir métricas, desempenho ou "como estão meus posts".
+- [TRIGGER:LIST_ACCOUNTS]: Use quando o usuário pedir para listar contas de anúncios.
+Diga que está iniciando a ação correspondente quando usar um gatilho.`;
 
     const result = await chat.sendMessage(`${systemContext}\n\nUsuário: ${texto}`);
     const respostaString = result.response.text();
@@ -155,6 +157,20 @@ Diga que está iniciando a produção.`;
         }
       } catch (e) {
         await enviarMensagem(remoteJid, "❌ Falha ao conectar com a Meta: " + e.message);
+      }
+    }
+
+    if (respostaString.includes("[TRIGGER:LIST_ACCOUNTS]")) {
+      await enviarMensagem(remoteJid, "🔍 Listando suas contas de anúncios... Aguarde.");
+      try {
+        const { code, output } = await executarSkill("skills/ads-insights/scripts/list_accounts.mjs");
+        if (code === 0) {
+          await enviarMensagem(remoteJid, output);
+        } else {
+          await enviarMensagem(remoteJid, "❌ Erro ao listar as contas de anúncios.");
+        }
+      } catch (e) {
+        await enviarMensagem(remoteJid, "❌ Falha na API da Meta: " + e.message);
       }
     }
 
