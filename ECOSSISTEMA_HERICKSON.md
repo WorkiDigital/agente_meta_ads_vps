@@ -53,6 +53,7 @@ Tudo está concentrado dentro de `whatsapp-bot/`:
    - Pede **as imagens de fundo** (cinemáticas e fotorrealistas) para a inteligência **Gemini 2.0 Flash**.
    - Usa a biblioteca NodeJS pura **`sharp`** para montar a Matemática do Design (desenhar as caixas SVG arredondadas, quebrar as linhas de texto no pixel perfeito, centralizar sua foto de perfil perfeitamente na barra de rodapé e fundir tudo na proporção Feed/Carrossel de `1080x1350`).
 4. **`postar-carrosel-instagram.mjs` e `Supabase`**: O Caminho de Entrega. O script pega as imagens desenhadas na etapa anterior, empurra temporariamente pro Servidor **Supabase** (necessário para o Meta poder enxergá-las publicamente), manda a ordem via **Instagram Graph API** ("Crie o Container" -> "Amarre em Carrossel" -> "PUBLIQUE COM AS HASHTAGS X") e, finalmente, limpa a sujeira apagando as imagens do Supabase.
+5. **`list_accounts.mjs` e `generate_report.js`**: Os Olhos Analíticos. Permitem listar contas de anúncios e gerar relatórios de performance para basear as decisões criativas em dados reais.
 
 ---
 
@@ -121,8 +122,13 @@ O que construímos aqui não é um curativo. É a fundação do **futuro das ag�
 - **Comportamento (As Rules).**
 - **Arquitetura Lógica de Sistemas (A Geração Sharp e Gemini).**
 - **Gestão de Processos (A Publicação via API e Limpeza de Storage).**
+- **Análise de Performance (Insights e Listagem de Contas).**
 
-### O que Fica na Lista Para o Futuro?
-- Plugar tudo isso em um Webhook limpo de verdade via bot. (O seu cliente, ou você, envia um áudio via zap -> Webhook ouve -> Chama o Agent Builder / Scripts Python ocultos -> Ele joga as artes montadas de volta no chat, ou pergunta: **"A legenda é essa Herickson. Posso apertar e mandar pro Instagram?"** -> Você responde **"Mete marcha."** -> E o post vai para o ar).
+### O que Fica na Lista Para o Futuro? (Roadmap 2025)
+1. **`leads-manager`**: Integração de Webhooks para capturar leads em tempo real e responder via WhatsApp em segundos.
+2. **`ads-automations`**: Regras inteligentes de pausa/escala de orçamento baseadas em ROI/CPA.
+3. **`audience-strategist`**: Gestão dinâmica de públicos personalizados e LAL via API.
+4. **`creative-auditor`**: Monitoramento automático de fadiga de anúncio e sobreposição de leilão.
+5. **Integração Total Zap**: Envio de áudio -> Agent Builder -> Artes Prontas -> Aprovação e Postagem em 1 clique.
 
 **Tudo isso, orquestrado e projetado pela equipe DeepMind usando o Antigravity / Gemini.** ✨

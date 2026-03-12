@@ -48,6 +48,17 @@ Este documento detalha o funcionamento técnico de cada "Habilidade" (Skill) do 
 
 ---
 
+## 5. 📈 Insights e Relatórios (Os Olhos)
+**Tecnologias:** `list_accounts.mjs` | `generate_report.js` | `ig_insights.js` | Meta Marketing API
+
+*   **Mapeamento de Contas:** O script `list_accounts.mjs` permite que o agente identifique todas as contas vinculadas, IDs e status atuais.
+*   **Auditoria de Performance:** Puxa métricas brutas (CTR, CPC, Spend) para validar se a estratégia de design e copy está convertendo.
+*   **Visão de Instagram:** `ig_insights.js` foca em métricas orgânicas e de engajamento do perfil para orientar a criação de novos conteúdos.
+
+---
+
 ## 📈 Fluxo de Trabalho Integrado
 Quando você diz no zap: *"Cria um post sobre escala de ROAS"*:
 1. **Webhook** ouve -> **Claude** pensa a estratégia -> **Claude** gera o `config.json` -> **Claude** roda o `gerar-post-premium.mjs` -> **Designer** gera artes -> **Copy** gera legenda -> **Claude** (ou você) roda o `postar-unico-instagram.mjs` -> **POST ESTÁ NO AR!** 🚀
+
+*Nova Etapa:* Antes de criar, o agente agora pode rodar `npm run insights` para ver o que funcionou antes e ajustar a abordagem!
