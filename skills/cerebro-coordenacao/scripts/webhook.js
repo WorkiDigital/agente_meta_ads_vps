@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import axios from "axios";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { spawn } from "child_process";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -12,13 +13,13 @@ const {
   EVOLUTION_API_KEY,
   EVOLUTION_INSTANCE,
   GEMINI_API_KEY,
-  PORT = 3000
+  PORT = 3000,
+  WORK_DIR = process.cwd()
 } = process.env;
 
 const genAI = GEMINI_API_KEY ? new GoogleGenerativeAI(GEMINI_API_KEY) : null;
 const AUTHORIZED_NUMBERS = ["558598372658", "558592494552"];
 
-// Memória de contexto (Histórico de mensagens por número)
 const historicoConversas = {};
 const MAX_MENSAGENS = 20;
 
@@ -49,41 +50,64 @@ async function enviarPresence(to) {
   } catch (e) {}
 }
 
-async function processarComIA(numero, texto) {
-  if (!genAI) return "⚠️ Erro: GEMINI_API_KEY não configurada.";
+/**
+ * Função para executar scripts de Skills na VPS
+ */
+function executarSkill(scriptPath, args = []) {
+  return new Promise((resolve) => {
+    console.log(`🚀 Executando Skill: node ${scriptPath} ${args.join(" ")}`);
+    const child = spawn("node", [scriptPath, ...args], { cwd: WORK_DIR });
+    
+    let output = "";
+    child.stdout.on("data", (data) => output += data.toString());
+    child.stderr.on("data", (data) => console.error(`[Skill Error] ${data}`));
+    
+    child.on("close", (code) => {
+      resolve({ code, output });
+    });
+  });
+}
+
+async function processarComIA(numero, texto, remoteJid) {
+  if (!genAI) return "⚠️ Gemini API não configurada.";
   
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     
-    // Recupera ou cria histórico para o número
-    if (!historicoConversas[numero]) {
-      historicoConversas[numero] = [];
-    }
+    if (!historicoConversas[numero]) historicoConversas[numero] = [];
 
     const chat = model.startChat({
       history: historicoConversas[numero],
-      generationConfig: {
-        maxOutputTokens: 2048,
-      },
     });
 
-    const result = await chat.sendMessage(texto);
+    const systemContext = `Você é o Agente Estrategista. Seu objetivo é ajudar o usuário e EXECUTAR ferramentas quando solicitado.
+FERRAMENTAS DISPONÍVEIS:
+1. Criar Carrossel: Se o usuário mandar lâminas ou pedir para criar artes de carrossel, responda confirmando e adicione a tag [TRIGGER:CARROSSEL] no fim da resposta.
+2. Ver Relatórios: Se pedir insights ou métricas, responda e adicione [TRIGGER:INSIGHTS].
+
+Peça desculpas se falhou antes e diga que agora vai executar.`;
+
+    const result = await chat.sendMessage(`${systemContext}\n\nUsuário: ${texto}`);
     const respostaString = result.response.text();
 
-    // Atualiza o histórico local (limita a 20 mensagens/objetos)
-    // O startChat consome o histórico no formato { role, parts: [{ text }] }
     historicoConversas[numero].push({ role: "user", parts: [{ text: texto }] });
     historicoConversas[numero].push({ role: "model", parts: [{ text: respostaString }] });
 
-    // Se passar de 20 (10 turnos de pergunta/resposta), remove os mais antigos
     if (historicoConversas[numero].length > MAX_MENSAGENS) {
       historicoConversas[numero] = historicoConversas[numero].slice(-MAX_MENSAGENS);
     }
 
+    // Lógica de Gatilho (Trigger)
+    if (respostaString.includes("[TRIGGER:CARROSSEL]")) {
+      await enviarMensagem(remoteJid, "🎨 Iniciando a geração das artes do carrossel agora mesmo... Isso pode levar alguns segundos.");
+      // Aqui dispararíamos o script de carrossel. Por enquanto vamos simular a chamada
+      // Nota: No próximo passo vamos conectar o JSON do carrossel ao script real.
+      executarSkill("skills/design-visual/scripts/gerar-post-premium.mjs", ["--prompt", texto]);
+    }
+
     const dataHora = new Date().toLocaleString("pt-BR", { timeZone: "America/Fortaleza" });
-    return `${respostaString}\n\n🕒 ${dataHora} (Memory Active)`;
+    return `${respostaString.replace(/\[TRIGGER:.*\]/g, "")}\n\n🕒 ${dataHora} (Action Mode ON)`;
   } catch (err) {
-    console.error("Erro no Gemini:", err);
     return "❌ Erro na IA: " + err.message;
   }
 }
@@ -94,27 +118,24 @@ app.post("/webhook", async (req, res) => {
   if (!body.data || body.data.key?.fromMe) return;
 
   const remoteJid = body.data.key.remoteJid;
-  if (remoteJid.includes("@g.us")) return; // Bloqueia grupos conforme pedido
+  if (remoteJid.includes("@g.us")) return;
 
   const numero = (body.data.key.participant || remoteJid).split('@')[0].split(':')[0];
   const texto = body.data.message?.conversation || body.data.message?.extendedTextMessage?.text;
 
   if (!texto || !AUTHORIZED_NUMBERS.includes(numero)) return;
 
-  console.log(`📩 Mensagem de: ${numero} (Histórico: ${historicoConversas[numero]?.length || 0})`);
   await enviarPresence(remoteJid);
+  const resposta = await processarComIA(numero, texto, remoteJid);
   
-  const resposta = await processarComIA(numero, texto);
-  
-  // Quebrar em pedaços se for muito grande
   const chunks = resposta.match(/[\s\S]{1,3000}/g) || [];
   for (const chunk of chunks) {
     await enviarMensagem(remoteJid, chunk);
   }
 });
 
-app.get("/", (req, res) => res.json({ status: "online", memory: "enabled", limit: MAX_MENSAGENS }));
+app.get("/", (req, res) => res.json({ status: "online", mode: "action" }));
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`✅ Servidor com MEMÓRIA rodando na porta ${PORT}`);
+  console.log(`✅ Servidor de AÇÃO rodando na porta ${PORT}`);
 });
