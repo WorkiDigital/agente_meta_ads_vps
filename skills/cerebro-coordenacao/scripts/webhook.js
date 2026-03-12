@@ -129,15 +129,32 @@ Diga que está iniciando a produção.`;
       if (configJson) {
         await enviarMensagem(remoteJid, "✨ JSON de Design gerado! Iniciando renderização das imagens...");
         
-        const { code, output } = await executarSkill("skills/design-visual/scripts/gerar-post-premium.mjs", ["--json", JSON.stringify(configJson)]);
-        
-        if (code === 0) {
-          await enviarMensagem(remoteJid, `✅ Artes geradas com sucesso!\n\n${output.substring(0, 500)}`);
-        } else {
-          await enviarMensagem(remoteJid, "❌ Houve um erro na renderização das artes.");
+        try {
+          const { code, output } = await executarSkill("skills/design-visual/scripts/gerar-post-premium.mjs", ["--json", JSON.stringify(configJson)]);
+          if (code === 0) {
+            await enviarMensagem(remoteJid, `✅ Artes geradas com sucesso!\n\n${output.substring(0, 500)}`);
+          } else {
+            await enviarMensagem(remoteJid, "❌ Houve um erro na renderização das artes.");
+          }
+        } catch (e) {
+          await enviarMensagem(remoteJid, "❌ Falha crítica na execução da Skill: " + e.message);
         }
       } else {
         await enviarMensagem(remoteJid, "❌ Não consegui estruturar o conteúdo do carrossel.");
+      }
+    }
+
+    if (respostaString.includes("[TRIGGER:INSIGHTS]")) {
+      await enviarMensagem(remoteJid, "📊 Consultando seus dados na Meta... Aguarde um instante.");
+      try {
+        const { code, output } = await executarSkill("skills/ads-insights/scripts/fast_report.mjs");
+        if (code === 0) {
+          await enviarMensagem(remoteJid, output);
+        } else {
+          await enviarMensagem(remoteJid, "❌ Erro ao gerar o relatório de insights.");
+        }
+      } catch (e) {
+        await enviarMensagem(remoteJid, "❌ Falha ao conectar com a Meta: " + e.message);
       }
     }
 

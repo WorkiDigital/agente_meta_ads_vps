@@ -52,7 +52,6 @@ export class DesignerService {
 
     async gerarSlidePremium({ texto, promptImagem, pastaDestino, nomeArquivo, caminhoImagemLocal = null, eCapa = false, modelo = "02" }) {
         if (!nomeArquivo) throw new Error("nomeArquivo obrigatório.");
-        const genAI_Old = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
         const genAI_New = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
         const W = 1080; const H = 1350; const PAD = 80;
         const brand = this.readBrand();

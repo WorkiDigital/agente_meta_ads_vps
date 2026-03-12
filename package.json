@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "webhook": "node --env-file=.env skills/cerebro-coordenacao/scripts/webhook.js",
-    "generate": "node --env-file=.env skills/design-visual/scripts/gerar-post-premium.mjs",
-    "insights": "node --env-file=.env skills/ads-insights/scripts/generate_report.js"
+    "generate": "node skills/design-visual/scripts/gerar-post-premium.mjs",
+    "insights": "node skills/ads-insights/scripts/fast_report.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
